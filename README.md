@@ -11,7 +11,7 @@ In this repository, I'm working to build a simulation framework that will enable
 
 This work also features automatic generation of dynamics equations for any Type-1 tensegrity system (connection nodes are connected to at most *one* rigid body), based on a simplified pointmass dynamics formulation.
 
-![top-level design](/Images/Dynamics.png)
+![top-level design](/Images/dynamics.png)
 
 ## Getting Started
 
