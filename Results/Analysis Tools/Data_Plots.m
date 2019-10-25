@@ -26,8 +26,6 @@ plot(COM_x(t_start),COM_y(t_start),'rp','linewidth',4)
 speed = norm([COM_x(t_time),COM_y(t_time)]-...
     [COM_x(t_start),COM_y(t_start)])/(dt*(t_time-t_start));
 title(['COM of Robot over Time, Avg. Velocity = ',num2str(speed),' m/s'])
-% disp(['Distance along Desired Direction:',num2str(([COM_x(t_time),...
-%     COM_y(t_time)]-[COM_x(t_start),COM_y(t_start)])*des_direction(1:2)')])
 axis('equal')
 xlabel('X [m]')
 ylabel('Y [m]')
