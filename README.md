@@ -11,7 +11,7 @@ This repository is a simulation framework that enables rapid prototyping of tens
 
 This work also features automatic generation of dynamics equations for any Type-1 tensegrity system (connection nodes are connected to at most *one* rigid body), based on a simplified pointmass dynamics formulation. While this trades off simulation accuracy, this approach enables rapid prototyping of different mechanical designs and sensor/actuator configurations to understand broad patterns of system feasibility, depending on design requirements. 
 
-![top-level design](/Images/dynamics.png)
+![dynamics](/Images/dynamics.png)
 
 ## Getting Started
 
