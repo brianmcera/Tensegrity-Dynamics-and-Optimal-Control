@@ -27,13 +27,13 @@ plant_name = 'DefaultPlant';
 % observer filename and custom input arguments
 observer_name = 'DefaultObserver';
 % controller filename and custom input arguments
-controller_name = 'iLQR_RollingDirection_2';
+controller_name = 'iLQR_RollingDirection';
 % cost filename and custom input arguments
 cost_name = 'velocityCost'; % NOTE:specify costFunction parameters below
 
-sim_time_step = 1e-2; % simulation timestep
+sim_time_step = 2e-3; % simulation timestep
 total_sim_steps = 5000; % total number of simulation timesteps
-controller_horizon = 30;%5; % MPC horizon for controller
+controller_horizon = 10;%5; % MPC horizon for controller
 actuation_mode = 1; % 1-cables, 2-rods, 3-both 
 
 % dynamics generation parameters

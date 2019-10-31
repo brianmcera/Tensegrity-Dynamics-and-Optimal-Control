@@ -5,7 +5,7 @@ Note - This is still an active work in progress. There still remains a lot of wo
 
 ![rolling tensegrity](/Images/rolling_tensegrity.png)
 
-This repository is a simulation framework that enables rapid prototyping of tensegrity designs, actuation and sensing topologies, control policies, and state observers. To this end, the code in this repository follows object-oriented design principles, where the System Plant, Controllers, and Observers are all independently encapsulated to enable quick plug-and-play experimentation of any system component. As an example, you may choose to implement Model Predictive Control with full-state information or experiment with iLQR and an Unscented Kalman Filter with noisy sensor data. For a published work example of this simulation framework, check out this [IROS 2018 paper](https://ieeexplore.ieee.org/document/8594401) which uses some of the tools in this repository to design a contextual neural network policy using optimal state-action trajectories generated using Model Predictive Control!
+This repository is a simulation framework that enables rapid prototyping of tensegrity designs, actuation and sensing topologies, control policies, and state observers. To this end, the code in this repository follows object-oriented design principles, where the System Plant, Controllers, and Observers are all independently encapsulated to enable quick plug-and-play experimentation of any system component. As an example, you may choose to implement Model Predictive Control with full-state information or experiment with iLQR and an Unscented Kalman Filter with noisy sensor data. For a published work example of this simulation framework, check out this [IROS 2018 paper](https://ieeexplore.ieee.org/document/8594401) which uses some of the tools in this repository to design a contextual neural network policy using optimal state-action trajectories generated using Model Predictive Control.
 
 ![top-level design](/Images/System_Design.png)
 
@@ -17,14 +17,19 @@ This work also features automatic generation of dynamics equations for any Type-
 
 ## Getting Started
 
-This repository depends on some recent MATLAB packages. From our testing, the codebase should work for MATLAB 2018a onwards. After cloning the repo, everything should work out of the box!
+This repository depends on some recent MATLAB packages. From our testing, the codebase should work for MATLAB 2018a onwards. After cloning the repo, everything MATLAB-related should work out of the box.
+
+**TODO: Include information regarding YALMIP and GUROBI**
 
 ## Running Examples
 
 In order to run the framework, call the top-level function:
+
 ```
 >> TensegritySimulation
 ```
+
+**TODO: Explain User-Defined Parameters (Maybe consider a separate config file?)**
 
 
 ## Authors

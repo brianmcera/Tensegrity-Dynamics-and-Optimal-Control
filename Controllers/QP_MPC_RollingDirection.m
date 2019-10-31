@@ -1,4 +1,4 @@
-classdef QP_MPC_RollingDirection2 < handle
+classdef QP_MPC_RollingDirection < handle
     %QP_MPC_ROLLINGDIRECTION Summary of this class goes here
     %   Detailed explanation goes here
     
@@ -35,7 +35,7 @@ classdef QP_MPC_RollingDirection2 < handle
     end
     
     methods
-        function obj = QP_MPC_RollingDirection2(...
+        function obj = QP_MPC_RollingDirection(...
                 X,omega,simTimeStep,horizon)
             %QP_MPC_ROLLINGDIRECTION Construct an instance of this class
             %   Detailed explanation goes here
