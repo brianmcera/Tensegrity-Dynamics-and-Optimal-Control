@@ -114,6 +114,9 @@ X.pDOT = zeros(38*3,1);
 midpoints_XYZ = kron(abs(Cbar),eye(3))*Verts/2;
 X.p = [Verts;midpoints_XYZ]; %append new midpoint nodes
 
+X.p(3:3:end) = X.p(3:3:end)-min(X.p(3:3:end))+0.1; %zero ground
+omega.X0 = X.p;
+
 %cable connection matrix
 omega.C = [];
 for i = 1:size(Cbar,1)
@@ -174,6 +177,8 @@ for rod = 1:size(R,1)
 end
 X.L = X.L'; %column vector
 
+omega.cableConstraintMatrix = eye(size(omega.C,1));
+omega.rodConstraintMatrix = eye(size(omega.R,1));
 %% DEFINE MODEL CONSTRAINTS////////////////////////////////////////////////
 %constraints is a cell array, where constraints{i} has two fields:
 %filename: the filename of the corresponding m-file in the

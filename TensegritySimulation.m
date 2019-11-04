@@ -21,7 +21,7 @@ rng('shuffle')
 %% User-defined Parameters ////////////////////////////////////////////////
 
 % model filename and custom input arguments
-model_name = 'I_six_bar_model';
+model_name = 'I_six_bar_model_CenterCableConnection';
 % plant filename and custom input arguments
 plant_name = 'DefaultPlant';
 % observer filename and custom input arguments
@@ -39,7 +39,7 @@ actuation_mode = 1; % 1-cables, 2-rods, 3-both
 % dynamics generation parameters
 save_dynamics_file = false;
 optimize_flag = false;
-optimized_dynamics_filename = 'optimizedDynamics_SixBar_19_08_28_15_53_23';
+optimized_dynamics_filename = '';%'optimizedDynamics_SixBar_19_08_28_15_53_23';
 
 % save data
 log_toggle =  true; % toggle flag to save simulation data to external file
