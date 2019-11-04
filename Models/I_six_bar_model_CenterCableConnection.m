@@ -114,9 +114,6 @@ X.pDOT = zeros(38*3,1);
 midpoints_XYZ = kron(abs(Cbar),eye(3))*Verts/2;
 X.p = [Verts;midpoints_XYZ]; %append new midpoint nodes
 
-X.p(3:3:end) = X.p(3:3:end)-min(X.p(3:3:end))+0.1; %zero ground
-omega.X0 = X.p;
-
 %cable connection matrix
 omega.C = [];
 for i = 1:size(Cbar,1)
@@ -136,6 +133,9 @@ end
 payloadLength = 0.005;
 COM = [mean(X.p(1:3:end));mean(X.p(2:3:end));mean(X.p(3:3:end))];
 X.p = [X.p;COM+[0,0,payloadLength/2]';COM-[0,0,payloadLength/2]'];
+
+X.p(3:3:end) = X.p(3:3:end)-min(X.p(3:3:end))+0.1; %zero ground
+omega.X0 = X.p;
 
 omega.C = [omega.C,zeros(size(omega.C,1),2)];
 

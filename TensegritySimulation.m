@@ -95,7 +95,7 @@ else
     % symbolic Input structure
     Usym = struct();
     Usym.RLdot = sym('RLdot',size(omega.cableConstraintMatrix,2),'real');
-    Usym.Ldot = sym('Ldot',size(X.L),'real');
+    Usym.Ldot = sym('Ldot',size(omega.rodConstraintMatrix,2),'real');
 
     % symbolic Helper Variables structure
     hVarSym = struct();
