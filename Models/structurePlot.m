@@ -24,13 +24,29 @@ if(clearFig)
 end
 grid on; hold on; xlabel('X'); ylabel('Y'); zlabel('Z');
 
+color1 = omega.cables.paired(1:3:end,:);
+color2 = omega.cables.paired(2:3:end,:);
+color3 = omega.cables.paired(3:3:end,:);
+color1 = reshape(color1,1,numel(color1));
+color2 = reshape(color2,1,numel(color2));
+color3 = reshape(color3,1,numel(color3));
 for n=1:size(C,1) %For each row in C find the connected vertices and plot a cable
     index = find(C(n,:)~=0); %index of non-zero values in the nth row of C (MUST HAVE 2 ELEMENTS)
     % index correlates to the row in Verts to make a connection
     x = [Verts(index(1)*3-2),Verts(index(2)*3-2)];
     y = [Verts(index(1)*3-1),Verts(index(2)*3-1)];
     z = [Verts(index(1)*3),Verts(index(2)*3)];
-    rope = line(x,y,z); rope.LineWidth = 2; rope.Color = [0 0 0];%[1,0.7,0]; 
+    if(~any(omega.cables.passive==n))
+        rope = line(x,y,z); rope.LineWidth = 2; rope.Color = 'k';
+    elseif(any(color1==n))
+        rope = line(x,y,z); rope.LineWidth = 2; rope.Color = 'm';
+    elseif(any(color2==n))
+        rope = line(x,y,z); rope.LineWidth = 2; rope.Color = 'c';
+    elseif(any(color3==n))
+        rope = line(x,y,z); rope.LineWidth = 2; rope.Color = 'k';
+    else
+        rope = line(x,y,z); rope.LineWidth = 1; rope.Color = 'k';
+    end
     if(cableLabel)
         mid = (Verts(index(1)*3-2:index(1)*3,:)+...
             Verts(index(2)*3-2:index(2)*3,:))/2;

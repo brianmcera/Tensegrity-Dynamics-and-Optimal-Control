@@ -5,9 +5,9 @@
 %
 %  Usage:      >> TensegritySimulation
 %
-%  Arguments:  
+%  Arguments:  N/A
 %
-%  Returns:    
+%  Returns:    N/A
 %
 %  Author:     Brian Cera
 %  Date:       Aug 2019
@@ -21,7 +21,7 @@ rng('shuffle')
 %% User-defined Parameters ////////////////////////////////////////////////
 
 % model filename and custom input arguments
-model_name = 'I_six_bar_model_CenterCableConnection';
+model_name = 'I_six_bar_model';
 % plant filename and custom input arguments
 plant_name = 'DefaultPlant';
 % observer filename and custom input arguments
@@ -31,7 +31,7 @@ controller_name = 'iLQR_RollingDirection';
 % cost filename and custom input arguments
 cost_name = 'velocityCost'; % NOTE:specify costFunction parameters below
 
-sim_time_step = 2e-3; % simulation timestep
+sim_time_step = 1e-2; % simulation timestep
 total_sim_steps = 5000; % total number of simulation timesteps
 controller_horizon = 10;%5; % MPC horizon for controller
 actuation_mode = 1; % 1-cables, 2-rods, 3-both 
@@ -39,7 +39,7 @@ actuation_mode = 1; % 1-cables, 2-rods, 3-both
 % dynamics generation parameters
 save_dynamics_file = false;
 optimize_flag = false;
-optimized_dynamics_filename = '';%'optimizedDynamics_SixBar_19_08_28_15_53_23';
+optimized_dynamics_filename = 'optimizedDynamics_SixBar_19_08_28_15_53_23';
 
 % save data
 log_toggle =  true; % toggle flag to save simulation data to external file
@@ -55,7 +55,7 @@ yz_random_rotate = false; % true/false
 camera_view_initial = [90, 0]; % format: [az,el] or {1,2,3}
 
 %simulation loop
-show_simulation_graphics = false;
+show_simulation_graphics = false; % toggle visualization on/off during loop
 open_loop_flag = true; % toggle open-loop calculation in loop (takes longer)
 camera_view_loop = [0,15]; % syntax: either A)[az,el] or B)integer,{1,2,3}
 
@@ -217,7 +217,8 @@ end
 
 % rotate robot about X-axis
 if(yz_random_rotate==true)
-    disp('~~"YZrandomRotate" parameter set to TRUE: Randomly rotating nodal positions about horizontal X-axis~~')
+    disp(['~~"YZrandomRotate" parameter set to TRUE: Randomly ',
+        'rotating nodal positions about horizontal X-axis~~'])
     % center YZ
     minZ = min(X.p(3:3:end));
     centeredY = X.p(2:3:end)-mean(X.p(2:3:end));
@@ -234,15 +235,17 @@ end
 pause(1e-3) % give time to update and redraw structurePlot
 
 
-%% Instantiate Cost function handle & Plant,Controller,Observer objects
+% Instantiate Cost function handle & Plant,Controller,Observer objects:
 % Handle and Objects created here after model instantiation
-% Note: 'omega' parameter here reflects updated cable/rod lengths after any
-% modifications to nominal model file (e.g., cable perturbations, model
+% Note: 'omega' parameter here now reflects updated cable/rod lengths after 
+% any modifications to nominal model file (e.g., cable perturbations, model
 % rotations, etc.
 
 %% cost function~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 % This function encapsulates all of the necessary parameters which can be 
 % tuned to produce a user-define desired behavior from the controller.
+% Designate the desired cost function by filename in the 'User-Defined
+% Parameters' section above.
 
 % user-defined arguments to cost function
 cost_args.RL_diff_weight = 5;
@@ -259,11 +262,13 @@ disp('Generating Cost Function Handle...')
 % This object is the simulated object which represents the actual robot.
 % Specifically, this object keeps track of the robot state throughout the
 % simulation. This is also where any actuator input noise and sensor output
-% noise should be incorporated.
+% noise should be incorporated. Define the desired Plant in the
+% 'User-Defined Parameters' section above.
 
 plant = feval(plant_name,X,omega,sim_time_step);
 
 %% Forward Simulate to Equilibrium (with Kinetic Energy Damping)
+% note: this occurs before Controller instantiation to update 'omega' struct
 forwardSimIter = 1;
 kineticEnergy_prev = 0;
 cablesStillMoving = 1; 
@@ -327,7 +332,8 @@ omega.X.p0 = plant.Current_p; % record equilibrium state for reference
 %% controller object~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 % This object handles optimal control of the robot. A variety of approaches
 % and algorithms can be plug-and-play inserted here. Examples include linear
-% time-varying MPC, iLQR, neural network, etc. 
+% time-varying MPC, iLQR, neural network, etc. Define the desired
+% Controller by filename in the 'User-Defined Parameters' section above.
 
 controllerTargets = {[30,0]'};
 targetIdx = 1;
@@ -340,10 +346,12 @@ controller.setTargetDestination(controllerTargets{targetIdx});
 % from the Plant object, simulates partially observable sensor data, and 
 % outputs the best estimate of the current state.
 % Additionally, any information about uncertainty/variance should be handled
-% by this object.
+% by this object. Define the desired Observer by filename in the 'User-
+% Defined Parameters' section above.
 
 observer = feval(observer_name,nominal_fcn,hFcns,jacobian_fcns,...
     X,omega,sim_time_step);
+Ydim = 84; % dimension of sensor observation vector
 
 %% Instantiate Record Arrays for Data Storage
 % **include 'record' in filename for automated storage**
@@ -359,8 +367,6 @@ simulationParameters_record.controllerHorizon = controller_horizon;
 
 % dimension of concatenated state vector
 Xdim = numel(X.p)+numel(X.pDOT)+numel(X.RL)+numel(X.L);
-% dimension of sensor observation vector
-Ydim = 84;
 
 X_record.p = zeros(size(X.p,1),total_sim_steps);
 X_record.pDOT = zeros(size(X.pDOT,1),total_sim_steps);
@@ -399,9 +405,10 @@ for iteration = 1:total_sim_steps
     disp(['Iteration: ',num2str(iteration)])
     disp(['Total Elapsed Time: ',num2str(toc(LoopStart))])
     
-    %% Simulate Plant (takes U, outputs Y)
+    %% PLANT (takes U, outputs Y)
     % handle cable actuation, motor dynamics, input saturation, input/output
     % noise
+    
     plantElapsed = tic;
     plant.stepForward(U,nominal_fcn,hFcns);
     Y = plant.outputSensors();    
@@ -414,33 +421,29 @@ for iteration = 1:total_sim_steps
     end
     disp(['Simulate Plant Elapsed Time: ',num2str(toc(plantElapsed))])
     
-    %% Observer (takes Y, outputs Xhat)
+    %% OBSERVER (takes Y, outputs Xhat)
     % examples:full-state information, Luenberg Observer, Kalman Filter,
     % Extended Kalman Filter, Unscented Kalman Filter
+    
     observerElapsed = tic;
     Qvar = (1e-2)^2*eye(size(X.p,1)+size(X.pDOT,1)+size(X.RL,1)+size(X.L,1));
     Rvar = diag([(1e-2)^2*ones(18,1);
         (10e-2)^2*ones(24,1);
         (1e-2)^2*ones(36,1);
         (1e-6)^2*ones(6,1)]);% observer vector dimension = 84
-    %     Rvar = (1e-6)^2*eye(78);
-
     [Xhat,Z,Pm,Pp] = observer.estimateState(Y,U,Qvar,Rvar);
     disp(['Observer Elapsed Time: ',num2str(toc(observerElapsed))])
-
-    %     structurePlot(Xhat,omega,constraints,cameraViewInitial,1,0,0)
     pause(1e-4)
     
-    %% Controller (takes Xhat outputs U)
+    %% CONTROLLER (takes Xhat outputs U)
     % examples: constrained QP MPC, iLQR, LQR
     % input arguments - Xhat,Uhat,pDDOT,jacobians,hFcns
-    controllerElapsed = tic;   
     
+    controllerElapsed = tic;     
     [U,OL_states,OL_inputs,hVars,cost,controllerOutputs] =...
         controller.getOptimalInput(...
         Xhat,U,nominal_fcn,jacobian_fcns,hFcns,costFcnHandle,...
-        debug_fcns,open_loop_flag);
-    
+        debug_fcns,open_loop_flag); 
     disp(['Controller Elapsed Time: ',num2str(toc(controllerElapsed))])
     
     %% inner-loop checks

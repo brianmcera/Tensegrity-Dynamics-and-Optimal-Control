@@ -3,17 +3,19 @@
 %t_time: last timestep to simulate
 %t_start: first timestep to simulate
 
-%% COM trajectory
-%time up to last simulated time
-t_time = find((X_record.p(1,:)),1,'last')
+%% Plot COM trajectory
+% This section plots the overall trajectory of the robot's center of mass.
+% Additionally, the overall speed of the robot is calculated in the plot
+% title.
 
+%time up to last simulated time
+t_time = find((X_record.p(1,:)),1,'last');
+disp(['Final simulation time: ', num2str(t_time)])
 t_start = 1;
 
-drawBasePolygons = 1;
+drawBasePolygons = 1; % toggle drawing base polygon (slightly slower)
+baseFloor = min(X_record.p(3:3:end,1))+1e-2; 
 
-baseFloor = min(X_record.p(3:3:end,1))+1e-2;
-
-% des_direction = simulationParameters_record.costArgs.target;
 dt = simulationParameters_record.timestep;
 
 COM_x = mean(X_record.p(1:3:end,:));
@@ -42,24 +44,19 @@ if(drawBasePolygons)
     end
 end
 
-%custom code
-% scatter([0 0 3 3],[0 -3 -3 0],'gp','linewidth',8)
-% scatter([0],[0],'rp','linewidth',15)
-% rectangle('Position',[-0.5 -0.5 1 1],'Curvature',[1 1],'FaceColor',[0.5 1 0.5 0.25])
-% rectangle('Position',[-0.5 -3.5 1 1],'Curvature',[1 1],'FaceColor',[0.5 1 0.5 0.25])
-% rectangle('Position',[2.5 -3.5 1 1],'Curvature',[1 1],'FaceColor',[0.5 1 0.5 0.25])
-% rectangle('Position',[2.5 -0.5 1 1],'Curvature',[1 1],'FaceColor',[0.5 1 0.5 0.25])
-
 set(gca,'fontsize',20,'fontname','times new roman')
 grid on
     
-%% 3D COM trajectory
-%time up to last simulated time
-t_time = find((X_record.p(1,:)),1,'last')
+%% Plot 3D COM trajectory
+% This section plots the center of mass in 3D-space. Useful for keeping
+% track of the robot's height relative to the ground. Additionally, the
+% robot's overall speed is calculated and displayed in the plot title.
 
+%time up to last simulated time
+t_time = find((X_record.p(1,:)),1,'last');
+disp(['Final simulation time: ', num2str(t_time)])
 t_start = 1;
 
-% des_direction = simulationParameters_record.costArgs.target;
 dt = simulationParameters_record.timestep;
 
 COM_x = mean(X_record.p(1:3:end,:));
@@ -74,23 +71,25 @@ speed = norm([COM_x(t_time),COM_y(t_time)]-...
     [COM_x(t_start),COM_y(t_start)])/(dt*(t_time-t_start));
 title(['COM of Robot over Time, Avg. Velocity = ',...
     num2str(speed)])
-% disp(['Distance along Desired Direction:',num2str(([COM_x(t_time),...
-%     COM_y(t_time)]-[COM_x(t_start),COM_y(t_start)])*des_direction(1:2)')])
 xlabel('x')
 ylabel('y')
 zlabel('z')
 axis('equal')
+grid on
 
-%% Dynamic movement WITHOUT ghost trail image
+%% Dynamic movement 
+% This section will display the robot dynamically moving. Useful for
+% understanding the overall behavior of the robot during movement.
+
 h = figure(1);
 clf
 title('Press Any Key to Start')
 pause()
 
-isolateNodes = false; %only plot nodes
-plot_openLoopTraj = false; %MPC OpenLoop Trajectories for each node
-highlightSupportNodes = false;
-plotDirection = true;
+isolateNodes = false; % only plot nodes
+plot_openLoopTraj = false; % MPC OpenLoop Trajectories for each node
+highlightSupportNodes = false; % plot the nodes in contact with the ground
+plotDirection = true; %show 
 plotCOM = true;
 recordVideo = false;
 
