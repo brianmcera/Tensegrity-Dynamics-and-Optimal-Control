@@ -134,6 +134,9 @@ payloadLength = 0.005;
 COM = [mean(X.p(1:3:end));mean(X.p(2:3:end));mean(X.p(3:3:end))];
 X.p = [X.p;COM+[0,0,payloadLength/2]';COM-[0,0,payloadLength/2]'];
 
+X.p(3:3:end) = X.p(3:3:end)-min(X.p(3:3:end))+0.1; %zero ground
+omega.X0 = X.p;
+
 omega.C = [omega.C,zeros(size(omega.C,1),2)];
 
 omega.R = [Rbar,zeros(size(Rbar,1),size(Cbar,1)),zeros(size(Rbar,1),2)];
@@ -174,6 +177,8 @@ for rod = 1:size(R,1)
 end
 X.L = X.L'; %column vector
 
+omega.cableConstraintMatrix = eye(size(omega.C,1));
+omega.rodConstraintMatrix = eye(size(omega.R,1));
 %% DEFINE MODEL CONSTRAINTS////////////////////////////////////////////////
 %constraints is a cell array, where constraints{i} has two fields:
 %filename: the filename of the corresponding m-file in the

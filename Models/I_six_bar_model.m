@@ -18,6 +18,8 @@ omega.cables.minLength = 0.1*ones(24,1);
 
 omega.cables.paired = [,]; 
 omega.cables.passive = [];
+% omega.cables.passive = [2,3,5,6,7,8,10,11,13,14,15,16,17,19,20,...
+%     22,23,24]; %actuated: 9,18,4,16,6,19
 omega.cables.similar = [,];
 
 %% DEFINE CABLE/ROD CONNECTIVITY MATRICES
