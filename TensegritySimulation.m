@@ -37,9 +37,9 @@ controller_horizon = 10;%5; % MPC horizon for controller
 actuation_mode = 1; % 1-cables, 2-rods, 3-both 
 
 % dynamics generation parameters
-save_dynamics_file = false;
-optimize_flag = false;
-optimized_dynamics_filename = 'optimizedDynamics_SixBar_19_08_28_15_53_23';
+save_dynamics_file = true;
+optimize_flag = true;
+optimized_dynamics_filename = 'optimizedDynamics_SixBar_';%optimizedDynamics_SixBar_19_08_28_15_53_23';
 
 % save data
 log_toggle =  true; % toggle flag to save simulation data to external file
@@ -118,11 +118,20 @@ else
     hVarSym.J = hFcns.J(Xsym,Usym,hVarSym);
     disp('Generating Dynamic Function Handles...')
     if(optimize_flag)
-        disp(['Optimizing Dynamics This will take >15 minutes ',...
+        disp(['Optimizing Dynamics This may take >15 minutes ',...
             '(optimizeFlag variable is set to "true")...'])
     end
     if(save_dynamics_file)
-        nominal_fcn.pDDOT = matlabFunction(nominal_fcn.pDDOT(Xsym,Usym,hVarSym),...
+        if(optimize_flag)
+            pDDOT_simplified = nominal_fcn.pDDOT(Xsym,Usym,hVarSym);
+            for i = 1:numel(pDDOT_simplified)
+                disp(['Simplifying element ',num2str(i),'/',num2str(numel(pDDOT_simplified))])
+                simp_time = tic;
+                pDDOT_simplified(i) = simplify(pDDOT_simplified(i));
+                disp(['Elapsed Time: ',num2str(toc(simp_time))])
+            end
+        end
+        nominal_fcn.pDDOT = matlabFunction(pDDOT_simplified,...
             'File',['Dynamics/Generated Dynamics/',optimized_dynamics_filename,...
             '_',num2str(time_stamp)],...
             'Optimize',optimize_flag,'Vars',{Xsym.p,Xsym.pDOT,Xsym.RL,Xsym.L});
