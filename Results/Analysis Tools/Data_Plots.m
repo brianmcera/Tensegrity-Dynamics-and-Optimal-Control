@@ -1,14 +1,15 @@
 %% Plotting and Data Analysis #########################################
 %######################################################################
-%t_time: last timestep to simulate
-%t_start: first timestep to simulate
+% (TIP: Press 'CTRL' + '=' to collapse all sections)
 
 %% Plot COM trajectory
 % This section plots the overall trajectory of the robot's center of mass.
 % Additionally, the overall speed of the robot is calculated in the plot
 % title.
 
-%time up to last simulated time
+% time up to last simulated time
+% t_time: last timestep to simulate
+% t_start: first timestep to simulate
 t_time = find((X_record.p(1,:)),1,'last');
 disp(['Final simulation time: ', num2str(t_time)])
 t_start = 1;
@@ -221,6 +222,14 @@ if(recordVideo)
 end
    
 %% Dynamic movement, ODE Matrix Input 
+% This section will display the robot dynamically moving. 
+% This section is different from the previous section because rather than
+% taking the typical struct X_record, it takes instead a matrix output
+% where the dimensions are (num_states)x(num_timesteps).
+% Useful for debugging ode45 outputs within inner simulation loops and
+% understanding the overall behavior of the robot during movement or other
+% causes for NaNs which may pop up.
+
 h = figure(1);
 clf
 title('Press Any Key to Start')
@@ -242,10 +251,6 @@ xTrans = XOUT';
 for idx = 1:size(xTrans,2)
     %pause()
     cla %for the node/direction plot
-
-%     CoM = [mean(xTrans(1:3:36,idx));
-%         mean(xTrans(2:3:36,idx));
-%         mean(xTrans(3:3:36,idx))];
     
     Xbar.p = xTrans(1:36,idx);
     structurePlot(Xbar,omega,[],[az,el],1,1,1)

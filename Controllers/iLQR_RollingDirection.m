@@ -22,6 +22,7 @@ classdef iLQR_RollingDirection < handle
         nU_RLdot
         cableConstraintMatrix
         rodConstraintMatrix
+        initial_step_guess
         
         %iLQR
         uGuess
@@ -44,6 +45,9 @@ classdef iLQR_RollingDirection < handle
             %controller timestep and horizon
             obj.dT = simTimeStep;
             obj.horizon = horizon;
+            
+            % ODE solver initial step guess
+            obj.initial_step_guess = obj.dT/20;
             
             %initialize origin as default target of [0,0]
             obj.targetDestination = [0 0]';
@@ -527,8 +531,12 @@ classdef iLQR_RollingDirection < handle
 
             %forward simulate dynamics with ODE solver
             XIN = [X.p;X.pDOT;X.RL;X.L];
-            [~,XOUT] = ode45(@(t,Xstacked)...
-                tensegrityODE(t,Xstacked,Uinput,obj.omega.nominalFcn,obj.omega.hFcns),[0 obj.dT],XIN);
+            options = odeset('RelTol',1e-2,'AbsTol',1e-2,...
+                'InitialStep',obj.initial_step_guess);
+            [t,XOUT] = ode113(@(t,Xstacked)...
+                tensegrityODE(t,Xstacked, Uinput,obj.omega.nominalFcn,...
+                obj.omega.hFcns), [0,obj.dT], XIN, options);
+            obj.initial_step_guess = t(end)-t(end-4);
             XOUT = XOUT(end,:)';
         end
         

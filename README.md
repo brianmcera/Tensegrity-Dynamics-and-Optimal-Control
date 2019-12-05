@@ -17,7 +17,11 @@ This work also features automatic generation of dynamics equations for any Type-
 
 ## Getting Started
 
-This repository depends on some recent MATLAB packages. From our testing, the codebase should work for MATLAB 2018a onwards. After cloning the repo, everything MATLAB-related should work out of the box.
+This repository depends on some recent MATLAB packages. From our testing, the codebase should work for MATLAB 2018a onwards. After cloning the repo, everything MATLAB-related should work out of the box, once the dependencies are properly installed. 
+
+Note: Remember to add all folders and sub-folders in this repository on MATLAB's search path directory ('Set Path' in the 'Home' tab).
+
+
 
 **TODO: Include information regarding YALMIP and GUROBI**
 

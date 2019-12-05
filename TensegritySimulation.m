@@ -27,7 +27,7 @@ plant_name = 'DefaultPlant';
 % observer filename and custom input arguments
 observer_name = 'DefaultObserver';
 % controller filename and custom input arguments
-controller_name = 'iLQR_RollingDirection';
+controller_name = 'iLQR_RollingDirection_2';
 % cost filename and custom input arguments
 cost_name = 'velocityCost'; % NOTE:specify costFunction parameters below
 
@@ -39,7 +39,7 @@ actuation_mode = 1; % 1-cables, 2-rods, 3-both
 % dynamics generation parameters
 save_dynamics_file = true;
 optimize_flag = true;
-optimized_dynamics_filename = 'optimizedDynamics_SixBar_';%optimizedDynamics_SixBar_19_08_28_15_53_23';
+optimized_dynamics_filename = 'optimizedDynamics_SixBar_19_08_28_15_53_23';
 
 % save data
 log_toggle =  true; % toggle flag to save simulation data to external file

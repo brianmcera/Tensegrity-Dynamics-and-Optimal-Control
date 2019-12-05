@@ -23,17 +23,17 @@ L_diff = X.L-repmat(omega.X.L0,1,size(X.L,2));
 for k=1:N+1
     %penalize cable difference from neutral length
     if(RL_diff_weight~=0) %check if possible to avoid computing norm
-        cost = cost + (stepDiscount^(k-1))*RL_diff_weight*norm(RL_diff(:,k),2);
+        cost = cost + (stepDiscount^(k-1))*RL_diff_weight*norm(RL_diff(:,k),1);
     end
     
     %penalize rod difference from neutral length
     if(L_diff_weight~=0) %check if possible to avoid computing norm
-        cost = cost + (stepDiscount^(k-1))*L_diff_weight*norm(L_diff(:,k),2);
+        cost = cost + (stepDiscount^(k-1))*L_diff_weight*norm(L_diff(:,k),1);
     end
     
     %penalize cable actuation
     if(RL_actuation_weight~=0) %check if possible to avoid computing norm
-        cost = cost + (stepDiscount^(k-1))*RL_actuation_weight*norm(RL_actuation(:,k),2);
+        cost = cost + (stepDiscount^(k-1))*RL_actuation_weight*norm(RL_actuation(:,k),1);
     end
     
     %reward nodal velocity
