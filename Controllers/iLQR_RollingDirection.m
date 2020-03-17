@@ -132,7 +132,7 @@ classdef iLQR_RollingDirection < handle
             %             desiredDirection(3) = desiredDirection(3)+0.5;
             %             desiredDirection = desiredDirection/norm(desiredDirection);
             
-            %linear penalty (velocity)
+            %linear reward (velocity)
             velReward = 5e0;
             obj.Q(end,obj.nX_p+1:3:obj.nX_p+obj.nX_pDOT) =...
                 -velReward/2*desiredDirection(1)*obj.omega.M/totalMass;%.*(Xhat.p(3:3:end)-mean(Xhat.p(3:3:end)));

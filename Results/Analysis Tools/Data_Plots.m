@@ -115,7 +115,7 @@ t_time = find((X_record.p(1,:)),1,'last');
 omega = simulationParameters_record.omega;
 constraints = [];
 
-for i = t_start:10:t_time
+for i = t_start:20:t_time
     %pause()
     if(~isolateNodes)
         Xbar.p = X_record.p(:,i);

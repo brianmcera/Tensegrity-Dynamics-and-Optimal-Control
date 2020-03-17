@@ -39,9 +39,7 @@ classdef iLQR_RollingDirection_2 < handle
         inputChangePenalty;
         
         discount1
-        discount2
-        
-        
+        discount2    
     end
     
     methods
@@ -121,8 +119,8 @@ classdef iLQR_RollingDirection_2 < handle
             obj.inputChangePenalty = 5e0*eye(obj.nU);
             
             % discount factors
-            obj.discount1 = 0.95; % discount factor on state penalty
-            obj.discount2 = 0.95; % discount factor on input penalty
+            obj.discount1 = 1.0;%0.95; % discount factor on state penalty
+            obj.discount2 = 1.0;%0.95; % discount factor on input penalty
         end
         
         function setTargetDestination(obj,target)
@@ -248,7 +246,8 @@ classdef iLQR_RollingDirection_2 < handle
             %advance initial input
 %             obj.uGuess(:,1:end-1) = obj.uGuess(:,2:end);
             obj.uGuess = repmat(obj.uGuess(:,2),1,N+1);
-            obj.uDeltaGuess = diff(obj.uGuess,1,2);
+%             obj.uDeltaGuess = diff(obj.uGuess,1,2);
+            obj.uDeltaGuess = zeros(size(obj.uGuess(:,2:end)));
             
             converged = 0; %initialize convergence flag to 'false'
             obj.xTraj = zeros(obj.nX,N+1);
@@ -318,7 +317,7 @@ classdef iLQR_RollingDirection_2 < handle
                     [~,~,~,~,~,~,dpDDOTdX] = lsqnonlin(...
                         @(x0)pDDOTparser(obj,x0),...
                         [Xhat.p;Xhat.pDOT;Xhat.RL;Xhat.L],[],[],...
-                        optimset('MaxIter',0,'Algorithm',...
+                        optimset('MaxIter',0,'MaxFunEvals',0,'Algorithm',...
                         'levenberg-marquardt',...
                         'Display','off'));
                     
@@ -499,6 +498,9 @@ classdef iLQR_RollingDirection_2 < handle
                     if(currCost<cost)
                         %disp('Finished Line Search')
                         %                         Alpha
+                        if(cost-currCost < 1e-3)
+                            converged = true;
+                        end
                         break
 %                     if(checkArmijo(obj,deltaX,obj.uGuess-uTempTop,...
 %                             obj.uDeltaGuess-uDeltaTempTop,Xref,Q,R,...
