@@ -1,4 +1,4 @@
-%  TENSEGRITYSIMULATION:  A top-level function to simulate general
+us%  TENSEGRITYSIMULATION:  A top-level function to simulate general
 %  tensegrity dynamics, subject to custom controllers, observers, and plant
 %  dynamics. Custom configuration parameters can be modified in first code
 %  section titled USER-DEFINED PARAMETERS.
@@ -27,7 +27,7 @@ plant_name = 'DefaultPlant';
 % observer filename and custom input arguments
 observer_name = 'DefaultObserver';
 % controller filename and custom input arguments
-controller_name = 'iLQR_RollingDirection_2';
+controller_name = 'QP_MPC_RollingDirection';
 % cost filename and custom input arguments
 cost_name = 'velocityCost'; % NOTE:specify costFunction parameters below
 

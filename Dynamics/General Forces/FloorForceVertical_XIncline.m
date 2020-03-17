@@ -65,7 +65,7 @@ switch desFunc
         f = genF;
     case 'dgenFdp'
         %args fields/values
-        baseFloor = args.baseFloor; %floor height Z-value
+        baseFloor = args. baseFloor; %floor height Z-value
         stiffness = args.stiffness; %floor stiffness
         damping = args.damping; %floor damping
         Beta = args.Beta; %parameter for softMax/softStep
