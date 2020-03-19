@@ -87,6 +87,10 @@ clf
 title('Press Any Key to Start')
 pause()
 
+rotateCamera = false; %continuous rotation camera
+el = 10; %elevation camera angle
+az = 0; %azimuthal camera angle
+
 isolateNodes = false; % only plot nodes
 plot_openLoopTraj = false; % MPC OpenLoop Trajectories for each node
 highlightSupportNodes = false; % plot the nodes in contact with the ground
@@ -101,11 +105,6 @@ if(recordVideo)
     v.Quality = 75;    % Default 75
     open(v);
 end
-
-
-rotateCamera = false; %continuous rotation camera
-el = 10; %elevation camera angle
-az = 0; %azimuthal camera angle
 
 t_start = 1;
 dt = simulationParameters_record.timestep;
@@ -221,7 +220,7 @@ if(recordVideo)
     close(v)
 end
    
-%% Dynamic movement, ODE Matrix Input 
+%% Dynamic movement, ODE Matrix Input (Useful for debugging ODE output)
 % This section will display the robot dynamically moving. 
 % This section is different from the previous section because rather than
 % taking the typical struct X_record, it takes instead a matrix output

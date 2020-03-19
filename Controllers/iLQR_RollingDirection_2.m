@@ -59,7 +59,7 @@ classdef iLQR_RollingDirection_2 < handle
             obj.targetDestination = [0 0]';
             
             %actuator limits
-            obj.omega = omega;
+            obj.omega = omega;  % import model config
             obj.cableLinearVelocity = omega.cables.linear_velocity;
             obj.cableMinLength = omega.cables.minLength;
             obj.cableMaxLength = omega.cables.maxLength;
@@ -70,8 +70,10 @@ classdef iLQR_RollingDirection_2 < handle
             obj.nX_L = numel(X.L);
             obj.nX = obj.nX_p+obj.nX_pDOT+obj.nX_RL+obj.nX_L;
             
-            obj.nU_RLdot = size(omega.cableConstraintMatrix,2); %constrained cable inputs
-            obj.nU_Ldot = size(omega.rodConstraintMatrix,2); %constrained rod inputs
+            % constrained cable inputs
+            obj.nU_RLdot = size(omega.cableConstraintMatrix,2);  
+            % constrained rod inputs
+            obj.nU_Ldot = size(omega.rodConstraintMatrix,2);        
             obj.nU = obj.nU_RLdot + obj.nU_Ldot;
             
             obj.cableConstraintMatrix = omega.cableConstraintMatrix;
@@ -119,8 +121,8 @@ classdef iLQR_RollingDirection_2 < handle
             obj.inputChangePenalty = 5e0*eye(obj.nU);
             
             % discount factors
-            obj.discount1 = 1.0;%0.95; % discount factor on state penalty
-            obj.discount2 = 1.0;%0.95; % discount factor on input penalty
+            obj.discount1 = 0.99; % discount factor on state penalty
+            obj.discount2 = 0.99; % discount factor on input penalty
         end
         
         function setTargetDestination(obj,target)
@@ -147,6 +149,15 @@ classdef iLQR_RollingDirection_2 < handle
             zSF = 10; % how much to weigh z-deviation
             desiredDirection = [desiredDirection;zSF*zWeight];
             desiredDirection = desiredDirection/norm(desiredDirection);
+            COM_vel = [sum(obj.omega.M.*Xhat.pDOT(1:3:end))/totalMass;
+                sum(obj.omega.M.*Xhat.pDOT(2:3:end))/totalMass;
+                0
+                ];
+            COM_vel = COM_vel/norm(COM_vel);
+            % Combine desired direction and current robot momentum
+            Beta = 0.25;  % weight on current momentum
+            desiredDirection = (1-Beta)*desiredDirection + Beta*COM_vel;  
+            desiredDirection = desiredDirection/norm(desiredDirection);
             
             %linear penalty (velocity)
             velReward = 5e0;
@@ -171,7 +182,7 @@ classdef iLQR_RollingDirection_2 < handle
             Xref = [zeros(obj.nX_p,1);
                 zeros(obj.nX_pDOT,1);
                 obj.omega.X.RL0; %neutral cable lengths
-                zeros(obj.nX_L,1)];
+                obj.omega.X.L0];
             %concatenated state
             Xcombined = [Xhat.p;Xhat.pDOT;Xhat.RL;Xhat.L];
             [U_OL,X_OL,costOutput,hVars] = obj.iLQR(Xcombined,obj.Q,obj.R,Xref);
@@ -260,11 +271,9 @@ classdef iLQR_RollingDirection_2 < handle
             end
             
             bestCost = 1e8;
-            Alpha = 0.5;
+            Alpha = 1;
             while(~converged)
-                Alpha = min(1,Alpha*1.5);%  %increase stepsize from last linesearch
-%                 Alpha = 1;
-                
+                Alpha = min(1,Alpha*1.5);%  %increase stepsize from last linesearch               
                 for t = N:-1:1 %for each timestep horizon to 1
                     %1 is last, so that hVars at t=t0 can be passed 
                     %as output to dynamics
@@ -346,9 +355,9 @@ classdef iLQR_RollingDirection_2 < handle
                         (decay2^(t-1)*obj.R*obj.uGuess(:,t))',...
                         [obj.xTraj(:,t)-Xref;1]'*decay1^(t-1)*Q*[obj.xTraj(:,t)-Xref;1]+...
                         obj.uGuess(:,t)'*decay2^(t-1)*obj.R*obj.uGuess(:,t)+...
-                        obj.uDeltaGuess(:,t)'*decay2^(t-1)*obj.RPrimemats(:,:,t)*obj.uDeltaGuess(:,t)];
+                        obj.uDeltaGuess(:,t)'*obj.RPrimemats(:,:,t)*obj.uDeltaGuess(:,t)];
                     obj.NPrimemats(:,:,t) = [zeros(obj.nX+1+obj.nU,obj.nU);
-                        obj.uDeltaGuess(:,t)'*obj.RPrimemats(:,:,t)];
+                        obj.uDeltaGuess(:,t)'*obj.RPrimemats(:,:,t)]; % discount already accounted for above
                     
                     % make Q positive definite
                     obj.QPrimemats(:,:,t) = obj.QPrimemats(:,:,t)+(abs(min([real(eig(obj.QPrimemats(:,:,t)));0]))+1e-3)*eye(size(obj.QPrimemats(:,:,t)));
@@ -596,7 +605,7 @@ classdef iLQR_RollingDirection_2 < handle
                 z = [obj.xTraj(:,t)-Xref;1];
                 cost = cost + z'*obj.discount1^(t-1)*Q*z +...
                     obj.uGuess(:,t)'*obj.discount2^(t-1)*R*obj.uGuess(:,t) +...
-                    obj.uDeltaGuess(:,t)'*obj.discount2^(t-1)*obj.RPrimemats(:,:,t)*obj.uDeltaGuess(:,t);
+                    obj.uDeltaGuess(:,t)'*obj.RPrimemats(:,:,t)*obj.uDeltaGuess(:,t);
             end
         end
         
@@ -608,10 +617,10 @@ classdef iLQR_RollingDirection_2 < handle
                 z = [obj.xTraj(:,t)-Xref;1]; %xTraj,uguess updated by this point
                 check = ratio*(2*(z-[xDelta(:,t);0])'*obj.discount1^(t-1)*Q*[xDelta(:,t);0] +...
                     2*(obj.uGuess(:,t)-uDelta(:,t))'*obj.discount2^(t-1)*R*uDelta(:,t)+...
-                    2*(obj.uDeltaGuess(:,t)-uChangeDelta(:,t))'*obj.discount2^(t-1)*obj.RPrimemats(:,:,t)*obj.uDeltaGuess(:,t));
+                    2*(obj.uDeltaGuess(:,t)-uChangeDelta(:,t))'*obj.RPrimemats(:,:,t)*obj.uDeltaGuess(:,t));
                 J = J + ratio*(2*(z-[xDelta(:,t);0])'*obj.discount1^(t-1)*Q*[xDelta(:,t);0] +...
                     2*(obj.uGuess(:,t)-uDelta(:,t))'*obj.discount2^(t-1)*R*uDelta(:,t)+...
-                    2*(obj.uDeltaGuess(:,t)-uChangeDelta(:,t))'*obj.discount2^(t-1)*obj.RPrimemats(:,:,t)*obj.uDeltaGuess(:,t));
+                    2*(obj.uDeltaGuess(:,t)-uChangeDelta(:,t))'*obj.RPrimemats(:,:,t)*obj.uDeltaGuess(:,t));
                 if(check>0)
                     disp('error')
                 end
