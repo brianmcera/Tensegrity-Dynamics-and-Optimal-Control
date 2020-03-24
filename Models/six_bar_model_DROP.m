@@ -1,4 +1,4 @@
-function [omega,X,constraints,generalForces] = I_six_bar_model()
+function [omega,X,constraints,generalForces] = six_bar_model_DROP()
 
 %% DEFINE ROD/CABLE PHYSICAL PARAMETERS
 omega.rods.linear_velocity = 1*ones(6,1);
@@ -107,7 +107,6 @@ omega.X0 = X.p;
 
 %Node XYZ Velocities
 X.pDOT = zeros(36,1);
-%X.pDOT(3:3:end) = -15;
 
 %% DEFINE INITIAL CABLE/ROD LENGTH INPUTS
 
@@ -154,7 +153,7 @@ baseFloor = min(X.p(3:3:end))-0.1;
 omega.generalForces{1}.filename = 'FloorForceVertical_XIncline';
 omega.generalForces{1}.args.baseFloor = baseFloor;
 omega.generalForces{1}.args.stiffness = 5e4; %5e2
-omega.generalForces{1}.args.damping = 3e2; %3e1
+omega.generalForces{1}.args.damping = 3e-1;%3e2; %3e1
 omega.generalForces{1}.args.Beta = 1e-2;
 omega.generalForces{1}.args.incline = 0;
 
@@ -162,7 +161,7 @@ omega.generalForces{2}.filename = 'Gravity';
 omega.generalForces{2}.args.gravity = 9.81;
 
 omega.generalForces{3}.filename = 'GeneralXYZDamping';
-omega.generalForces{3}.args.damping = 1e-0;
+omega.generalForces{3}.args.damping = 1e-4;
 
 omega.generalForces{4}.filename = 'FloorForceHorizontal_ViscousFriction';
 omega.generalForces{4}.args.baseFloor = baseFloor;

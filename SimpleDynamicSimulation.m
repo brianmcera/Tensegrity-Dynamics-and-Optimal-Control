@@ -20,45 +20,44 @@ rng('shuffle')
  
 %% User-defined Parameters ////////////////////////////////////////////////
 
-% model filename
-model_name = 'six_bar_model';
-% plant filename
+% model filename 
+model_name = 'six_bar_model_DROP';
+% plant filename 
 plant_name = 'DefaultPlant';
-% observer filename
-observer_name = 'DefaultObserver';
-% controller filename
-controller_name = 'iLQR_RollingDirection_2';
-% cost filename
-cost_name = 'velocityCost'; % NOTE:specify costFunction parameters below
+% observer filename 
+observer_name = '';
+% controller filename 
+controller_name = '';
+% cost filename 
+cost_name = '';  
 
-sim_time_step = 1e-2;       % simulation timestep
+sim_time_step = 5e-3;       % simulation timestep
 total_sim_steps = 5000;     % total number of simulation timesteps
-controller_horizon = 10;%5; % MPC horizon for controller
+controller_horizon = 10;    % MPC horizon for controller
 actuation_mode = 1;         % 1-cables, 2-rods, 3-both 
 
 % dynamics generation parameters
 save_dynamics_file = true;
 optimize_flag = true;
-optimized_dynamics_filename = 'optimizedDynamics_SixBar_19_08_28_15_53_23';
+optimized_dynamics_filename = 'optimizedDynamics_SixBar-DROP_20_03_23_18_50';
 
 % save data
 log_toggle =  true; % toggle flag to save simulation data to external file
-save_period = 10;   % how often to save data (e.g., every 50 timesteps)
+save_period = 200;  % how often to save data (e.g., every 50 timesteps)
 
 % forward simulation / initial conditions
-sim_to_equilibrium = false;             % true/false
 show_initialization_graphics = false;   % true/false
 kinetic_energy_damping = false;         % true/false
 perturb_cables_percent = 0.00;          % double between 0 and 1
 perturb_rods_percent = 0.00;            % double between 0 and 1
-xy_random_rotate = false;               % true/false
-yz_random_rotate = false;               % true/false
+xy_random_rotate = true;                % true/false
+yz_random_rotate = true;                % true/false
 camera_view_initial = [90, 0];          % format: [az,el] or {1,2,3}
 
 %simulation loop
-show_simulation_graphics = false;   % toggle visualization in loop
+show_simulation_graphics = true;    % toggle visualization in loop
 open_loop_flag = true;              % toggle open-loop calculation in loop 
-camera_view_loop = [0,15];          % either A)[az,el] or B)integer,{1,2,3}
+camera_view_loop = [0,0];          % either A)[az,el] or B)integer,{1,2,3}
 
 
 %//////////////////////////////////////////////////////////////////////////
@@ -227,7 +226,7 @@ end
 
 % rotate robot about X-axis
 if(yz_random_rotate==true)
-    disp(['~~"YZrandomRotate" parameter set to TRUE: Randomly ',
+    disp(['~~"YZrandomRotate" parameter set to TRUE: Randomly ',...
         'rotating nodal positions about horizontal X-axis~~'])
     % center YZ
     minZ = min(X.p(3:3:end));
@@ -251,23 +250,6 @@ pause(1e-3) % give time to update and redraw structurePlot
 % any modifications to nominal model file (e.g., cable perturbations, model
 % rotations, etc.
 
-%% cost function~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
-% This function encapsulates all of the necessary parameters which can be 
-% tuned to produce a user-define desired behavior from the controller.
-% Designate the desired cost function by filename in the 'User-Defined
-% Parameters' section above.
-
-% user-defined arguments to cost function
-cost_args.RL_diff_weight = 5;
-cost_args.RL_actuation_weight = 0;
-cost_args.L_diff_weight = 0;
-cost_args.velocity_reward = 5;
-cost_args.omega = omega; 
-cost_args.stepDiscount = 0.95;
-cost_args.N = controller_horizon;
-costFcnHandle = @(X,U,runtimeArgs)feval(cost_name,X,U,cost_args,runtimeArgs);
-disp('Generating Cost Function Handle...')
-
 %% plant object~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 % This object is the simulated object which represents the actual robot.
 % Specifically, this object keeps track of the robot state throughout the
@@ -279,91 +261,67 @@ plant = feval(plant_name,X,omega,sim_time_step);
 
 %% Forward Simulate to Equilibrium (with Kinetic Energy Damping)
 % note: this occurs before Controller instantiation to update 'omega' struct
-if(sim_to_equilibrium)
-    forwardSimIter = 1;
-    kineticEnergy_prev = 0;
-    cablesStillMoving = 1;
+forwardSimIter = 1;
+kineticEnergy_prev = 0;
+cablesStillMoving = 1;
+
+if(any(X_desired.RL<omega.cables.minLength))
+    error(['Desired restlength is less than minimum cable ',...
+        'length limits. Increase stiffness or decrease desired pretension'])
+end
+
+disp('Starting forward simulation to equilibrium...')
+if(kinetic_energy_damping)
+    disp('Kinetic Damping, Current KE:')
+end
+while((plant.getKineticEnergy()>1e-4)||... % non-negligible kinetic energy
+        plant.getKineticEnergy()==0 ||... % KE just got reset
+        cablesStillMoving) % cables haven't yet reached goal rest lengths
     
-    if(any(X_desired.RL<omega.cables.minLength))
-        error(['Desired restlength is less than minimum cable ',...
-            'length limits. Increase stiffness or decrease desired pretension'])
+    % calculate appropriate cable length / rod length
+    U.RLdot = sign(X_desired.RL - plant.Current_RL).*...
+        min(omega.cables.linear_velocity,...
+        abs(X_desired.RL - plant.Current_RL)/sim_time_step);
+    U.Ldot = zeros(size(plant.Current_L));
+    
+    % advance simulation one timestep
+    plant.stepForward(U,nominal_fcn,hFcns);
+    X.p = plant.Current_p;
+    X.pDOT = plant.Current_pDOT;
+    
+    % plot update
+    if(show_initialization_graphics==true)
+        structurePlot(X,omega,constraints,camera_view_initial,1,0,1);
+        title(['t = ',num2str(plant.simulationTime)])
+        drawnow()
     end
     
-    disp('Starting forward simulation to equilibrium...')
+    % kinetic energy damping
     if(kinetic_energy_damping)
-        disp('Kinetic Damping, Current KE:')
+        if(plant.getKineticEnergy() < kineticEnergy_prev &&...
+                forwardSimIter>3)
+            plant.Current_pDOT = zeros(size(plant.Current_pDOT));
+            kineticEnergy_prev = 0;
+            forwardSimIter = 0;
+            disp('KE Peak, wiping velocities')
+        else
+            kineticEnergy_prev = plant.getKineticEnergy();
+            fprintf('%3.2e..',kineticEnergy_prev);
+        end
     end
-    while((plant.getKineticEnergy()>1e-4)||... % non-negligible kinetic energy
-            plant.getKineticEnergy()==0 ||... % KE just got reset
-            cablesStillMoving) % cables haven't yet reached goal rest lengths
-        
-        % calculate appropriate cable length / rod length
-        U.RLdot = sign(X_desired.RL - plant.Current_RL).*...
-            min(omega.cables.linear_velocity,...
-            abs(X_desired.RL - plant.Current_RL)/sim_time_step);
-        U.Ldot = zeros(size(plant.Current_L));
-        
-        % advance simulation one timestep
-        plant.stepForward(U,nominal_fcn,hFcns);
-        X.p = plant.Current_p;
-        X.pDOT = plant.Current_pDOT;
-        
-        % plot update
-        if(show_initialization_graphics==true)
-            structurePlot(X,omega,constraints,camera_view_initial,1,0,1);
-            title(['t = ',num2str(plant.simulationTime)])
-            drawnow()
-        end
-        
-        % kinetic energy damping
-        if(kinetic_energy_damping)
-            if(plant.getKineticEnergy() < kineticEnergy_prev &&...
-                    forwardSimIter>3)
-                plant.Current_pDOT = zeros(size(plant.Current_pDOT));
-                kineticEnergy_prev = 0;
-                forwardSimIter = 0;
-                disp('KE Peak, wiping velocities')
-            else
-                kineticEnergy_prev = plant.getKineticEnergy();
-                fprintf('%3.2e..',kineticEnergy_prev);
-            end
-        end
-        
-        % cables reach desired initial (perturbed) state
-        if(norm(plant.Current_RL-X_desired.RL)<1e-6)
-            cablesStillMoving = 0;
-        end
-        
-        forwardSimIter = forwardSimIter+1;
+    
+    % cables reach desired initial (perturbed) state
+    if(norm(plant.Current_RL-X_desired.RL)<1e-6)
+        cablesStillMoving = 0;
     end
+    
+    forwardSimIter = forwardSimIter+1;
 end
 plant.resetClock(); % reset simulation time for recordkeeping
 omega.X.p0 = plant.Current_p; % record equilibrium state for reference
 
-
-%% controller object~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
-% This object handles optimal control of the robot. A variety of approaches
-% and algorithms can be plug-and-play inserted here. Examples include linear
-% time-varying MPC, iLQR, neural network, etc. Define the desired
-% Controller by filename in the 'User-Defined Parameters' section above.
-
-controllerTargets = {[30,0]'};
-targetIdx = 1;
-controller = feval(controller_name,X,omega,sim_time_step,controller_horizon);
-controller.setActuationMode(actuation_mode);
-controller.setTargetDestination(controllerTargets{targetIdx});
-
-%% observer object~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
-% This object is the observer/estimator, which takes in the full information
-% from the Plant object, simulates partially observable sensor data, and 
-% outputs the best estimate of the current state.
-% Additionally, any information about uncertainty/variance should be handled
-% by this object. Define the desired Observer by filename in the 'User-
-% Defined Parameters' section above.
-
-observer = feval(observer_name,nominal_fcn,hFcns,jacobian_fcns,...
-    X,omega,sim_time_step);
-Ydim = 84; % dimension of sensor observation vector
+plant.Current_p(3:3:end) = plant.Current_p(3:3:end)+0.5;
+plant.Current_pDOT(3:3:end) = -15;  % set impact velocity to 15 m/s
 
 %% Instantiate Record Arrays for Data Storage
 % **include 'record' in filename for automated storage**
@@ -372,8 +330,6 @@ simulationParameters_record.model = model_name;
 simulationParameters_record.plant = plant_name;
 simulationParameters_record.controller = controller_name;
 simulationParameters_record.observer = observer_name;
-simulationParameters_record.costName = cost_name;
-simulationParameters_record.costArgs = cost_args;
 simulationParameters_record.timestep = sim_time_step;
 simulationParameters_record.controllerHorizon = controller_horizon;
 
@@ -384,17 +340,6 @@ X_record.p = zeros(size(X.p,1),total_sim_steps);
 X_record.pDOT = zeros(size(X.pDOT,1),total_sim_steps);
 X_record.RL = zeros(size(X.RL,1),total_sim_steps);
 X_record.L = zeros(size(X.L,1),total_sim_steps);
-U_record.RLdot = zeros(size(X.RL,1),total_sim_steps);
-U_record.Ldot = zeros(size(X.L,1),total_sim_steps);
-Xhat_record.p = zeros(size(X.p,1),total_sim_steps);
-Xhat_record.pDOT = zeros(size(X.pDOT,1),total_sim_steps);
-Xhat_record.RL = zeros(size(X.RL,1),total_sim_steps);
-Xhat_record.L = zeros(size(X.L,1),total_sim_steps);
-Z_record = zeros(Ydim,total_sim_steps);
-Pm_record = zeros(Xdim,total_sim_steps);
-Pp_record = zeros(Xdim,total_sim_steps);
-X_openLoop_record = cell(1,total_sim_steps);
-U_openLoop_record = cell(1,total_sim_steps);
 Gamma_record = zeros(size(X.p,1),total_sim_steps);
 GenForce_record = zeros(size(X.p,1),total_sim_steps);
 ConstrForce_record = zeros(size(X.p,1),total_sim_steps);
@@ -430,82 +375,31 @@ for iteration = 1:total_sim_steps
         X.pDOT = plant.Current_pDOT;
         structurePlot(X,omega,constraints,camera_view_loop,1,0,1);
         title(['t = ',num2str(plant.simulationTime)])
+        pause(1e-3)
     end
     disp(['Simulate Plant Elapsed Time: ',num2str(toc(plantElapsed))])
-    
-    %% OBSERVER (takes Y, outputs Xhat)
-    % examples:full-state information, Luenberg Observer, Kalman Filter,
-    % Extended Kalman Filter, Unscented Kalman Filter
-    
-    observerElapsed = tic;
-    Qvar = (1e-2)^2*eye(size(X.p,1)+size(X.pDOT,1)+size(X.RL,1)+size(X.L,1));
-    Rvar = diag([(1e-2)^2*ones(18,1);
-        (10e-2)^2*ones(24,1);
-        (1e-2)^2*ones(36,1);
-        (1e-6)^2*ones(6,1)]);% observer vector dimension = 84
-    [Xhat,Z,Pm,Pp] = observer.estimateState(Y,U,Qvar,Rvar);
-    disp(['Observer Elapsed Time: ',num2str(toc(observerElapsed))])
-    pause(1e-4)
-    
-    %% CONTROLLER (takes Xhat outputs U)
-    % examples: constrained QP MPC, iLQR, LQR
-    % input arguments - Xhat,Uhat,pDDOT,jacobians,hFcns
-    
-    controllerElapsed = tic;     
-    [U,OL_states,OL_inputs,hVars,cost,controllerOutputs] =...
-        controller.getOptimalInput(...
-        Xhat,U,nominal_fcn,jacobian_fcns,hFcns,costFcnHandle,...
-        debug_fcns,open_loop_flag); 
-    disp(['Controller Elapsed Time: ',num2str(toc(controllerElapsed))])
-    
-    %% inner-loop checks
-    xCOM = mean(plant.Current_p(1:3:end));
-    yCOM = mean(plant.Current_p(2:3:end));
-    zCOM = mean(plant.Current_p(3:3:end));
-    centroid = [xCOM;yCOM;zCOM];
-    if(norm(centroid(1:2)-controllerTargets{targetIdx})<0.5)
-        targetIdx = targetIdx+1;
-        if(targetIdx <= numel(controllerTargets))
-            controller.setTargetDestination(controllerTargets{targetIdx});
-        else
-            return
-        end
-    end
-    if(resetCables == 1 && norm(omega.U.RL0-plant.Current_RL)<=1e-3)
-        resetCables = 0;
-    end
-    
+
     %% Save Data
     if(log_toggle)
         X_record.p(:,iteration) = plant.Current_p;
         X_record.pDOT(:,iteration) = plant.Current_pDOT;
         X_record.RL(:,iteration) = plant.Current_RL;
         X_record.L(:,iteration) = plant.Current_L;
-        Xhat_record.p(:,iteration) = Xhat.p;
-        Xhat_record.pDOT(:,iteration) = Xhat.pDOT;
-        Xhat_record.RL(:,iteration) = Xhat.RL;
-        Xhat_record.L(:,iteration) = Xhat.L;
-        Pm_record(:,iteration) = Pm;
-        Pp_record(:,iteration) = Pp;
-        U_record.RLdot(:,iteration) = U.RLdot;
-        U_record.Ldot(:,iteration) = U.Ldot;
-        X_openLoop_record{iteration} = OL_states; % save memory
-        U_openLoop_record{iteration} = OL_inputs; % save memory
-        Xbar.p = plant.Current_p;
-        Xbar.pDOT = plant.Current_pDOT;
-        Xbar.RL = plant.Current_RL;
-        Xbar.L = plant.Current_L;
-        Ubar = U;
-        Gamma_record(:,iteration) = Gamma(Xbar,Ubar,hVars);
-        GenForce_record(:,iteration) = gen_forces(Xbar,Ubar,hVars);
-        ConstrForce_record(:,iteration) = constr_forces(Xbar,Ubar,hVars);
-        cost_record(iteration) = cost;
-        controllerOutputArgs_record{iteration} = controllerOutputs;
+        %         Xbar.p = plant.Current_p;
+        %         Xbar.pDOT = plant.Current_pDOT;
+        %         Xbar.RL = plant.Current_RL;
+        %         Xbar.L = plant.Current_L;
+        %         Ubar = U;
+        %         Gamma_record(:,iteration) = Gamma(Xbar,Ubar,hVars);
+        %         GenForce_record(:,iteration) = gen_forces(Xbar,Ubar,hVars);
+        %         ConstrForce_record(:,iteration) = constr_forces(Xbar,Ubar,hVars);
+        %         cost_record(iteration) = cost;
+        %         controllerOutputArgs_record{iteration} = controllerOutputs;
         if(mod(iteration,save_period)==0)
             workspaceVars = who;
             try
-                save(['./Results/LatestResults_MPC_',num2str(time_stamp),'_',...
-                    model_name,'_iLQR'],...
+                save(['./Results/LatestResults_SimpleDrop_',num2str(time_stamp),'_',...
+                    model_name],...
                     workspaceVars{not(~contains(workspaceVars, 'record'))})
             catch
                 disp('File Temporarily Unavailable')

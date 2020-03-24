@@ -273,6 +273,7 @@ classdef iLQR_RollingDirection_2 < handle
             bestCost = 1e8;
             Alpha = 1;
             while(~converged)
+                converged = true; % DEBUGGING!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
                 Alpha = min(1,Alpha*1.5);%  %increase stepsize from last linesearch               
                 for t = N:-1:1 %for each timestep horizon to 1
                     %1 is last, so that hVars at t=t0 can be passed 
@@ -460,8 +461,9 @@ classdef iLQR_RollingDirection_2 < handle
                         obj.xTraj(:,t+1) = stepForward(obj,obj.uGuess(:,t),obj.xTraj(:,t));
                         deltaX(:,t+1) = obj.xTraj(:,t+1)-tempX;
                         tempU = obj.uGuess(:,t+1);
+                        %update next uGuess at time t
                         obj.uGuess(:,t+1) = obj.uGuess(:,t) +...
-                            obj.uDeltaGuess(:,t); %update next uGuess at time t
+                            obj.uDeltaGuess(:,t); 
                         deltaU(:,t+1) = obj.uGuess(:,t+1)-tempU;   
                     end          
                     
