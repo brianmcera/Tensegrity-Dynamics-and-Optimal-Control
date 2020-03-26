@@ -29,8 +29,14 @@ Note: Remember to add all folders and sub-folders in this repository on MATLAB's
 
 In order to run the framework, call the top-level function:
 
-```
+```bash
 >> TensegritySimulation
+```
+
+To examine and visualize a specific tensegrity topology, run the associate model file then run structurePlot.m:
+```bash
+>> six_bar_model
+>> structurePlot(X,omega,constraints,camera_view_initial,1,1,1,1,1)
 ```
 
 **TODO: Explain User-Defined Parameters (Maybe consider a separate config file?)**
