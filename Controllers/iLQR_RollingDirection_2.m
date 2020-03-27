@@ -88,7 +88,7 @@ classdef iLQR_RollingDirection_2 < handle
             cableDeviationPenalty = 5e1;%5e1;
             obj.Q(obj.nX_p+obj.nX_pDOT+1:obj.nX_p+obj.nX_pDOT+obj.nX_RL,...
                 obj.nX_p+obj.nX_pDOT+1:obj.nX_p+obj.nX_pDOT+obj.nX_RL) = ...
-                cableDeviationPenalty*eye(obj.nX_RL); %1e0 works for 6-bar,
+                cableDeviationPenalty*eye(obj.nX_RL); 
             
             %velocity input penalty
             cableVel_cost = 5e-4;
@@ -144,11 +144,14 @@ classdef iLQR_RollingDirection_2 < handle
             desiredDirection = obj.targetDestination-[xCOM;yCOM];
             desiredDirection = desiredDirection/norm(desiredDirection);
             
+            % vertical direction
             zWeight = 1.1*sum(obj.omega.M.*obj.omega.X.p0(3:3:end))/...
                 totalMass-zCOM; % 10% higher than neutral position
             zSF = 10; % how much to weigh z-deviation
             desiredDirection = [desiredDirection;zSF*zWeight];
             desiredDirection = desiredDirection/norm(desiredDirection);
+            
+            % maintain momentum
             COM_vel = [sum(obj.omega.M.*Xhat.pDOT(1:3:end))/totalMass;
                 sum(obj.omega.M.*Xhat.pDOT(2:3:end))/totalMass;
                 0
@@ -193,10 +196,6 @@ classdef iLQR_RollingDirection_2 < handle
                 U_OL(1:size(obj.cableConstraintMatrix,2),2);
             U_desired.Ldot = obj.rodConstraintMatrix*...
                 U_OL(size(obj.cableConstraintMatrix,2)+1:end,2);
-            %             U_desired.RLdot = obj.cableConstraintMatrix*...
-            %                 mean(U_OL(1:size(obj.cableConstraintMatrix,2),:),2);
-            %             U_desired.Ldot = obj.rodConstraintMatrix*...
-            %                 mean(U_OL(size(obj.cableConstraintMatrix,2)+1:end,:),2);
             
             if(any(abs(U_desired.RLdot)>obj.cableLinearVelocity))
                 disp('WARNING: Desired Cable velocity exceeds motor capability')
@@ -273,7 +272,6 @@ classdef iLQR_RollingDirection_2 < handle
             bestCost = 1e8;
             Alpha = 1;
             while(~converged)
-                converged = true; % DEBUGGING!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
                 Alpha = min(1,Alpha*1.5);%  %increase stepsize from last linesearch               
                 for t = N:-1:1 %for each timestep horizon to 1
                     %1 is last, so that hVars at t=t0 can be passed 

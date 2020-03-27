@@ -88,7 +88,7 @@ title('Press Any Key to Start')
 pause()
 
 rotateCamera = false; %continuous rotation camera
-el = 10; %elevation camera angle
+el = 0; %elevation camera angle
 az = 0; %azimuthal camera angle
 
 isolateNodes = false; % only plot nodes
@@ -119,7 +119,7 @@ for i = t_start:5:t_time
     if(~isolateNodes)
         Xbar.p = X_record.p(:,i);
         Xbar.pDOT = X_record.pDOT(:,i);
-        structurePlot(Xbar,omega,constraints,[az,el],1,1,0)
+        structurePlot(Xbar,omega,constraints,[az,el],1,1,0,0,0)
         camlight
 
         if(rotateCamera)
@@ -197,15 +197,15 @@ for i = t_start:5:t_time
 %             lead_direction(1)/5,lead_direction(2)/5,lead_direction(3)/5,'b','linewidth',1);
 %     end
     
-    %plot desired direction
-    if(plotCOM)
-        Centroid_pos = [mean(X_record.p(1:3:end,i));...
-            mean(X_record.p(2:3:end,i));...
-            mean(X_record.p(3:3:end,i))];
-        plot3([Centroid_pos(1) Centroid_pos(1)],...
-            [Centroid_pos(2) Centroid_pos(2)],...
-            [Centroid_pos(3) baseFloor],'r--p','linewidth',5);
-    end
+%     %plot COM
+%     if(plotCOM)
+%         Centroid_pos = [mean(X_record.p(1:3:end,i));...
+%             mean(X_record.p(2:3:end,i));...
+%             mean(X_record.p(3:3:end,i))];
+%         plot3([Centroid_pos(1) Centroid_pos(1)],...
+%             [Centroid_pos(2) Centroid_pos(2)],...
+%             [Centroid_pos(3) baseFloor],'r--p','linewidth',5);
+%     end
     
     zlim([0 1])
     pause(dt/10)

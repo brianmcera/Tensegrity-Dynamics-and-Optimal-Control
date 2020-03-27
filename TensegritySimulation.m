@@ -31,24 +31,23 @@ controller_name = 'iLQR_RollingDirection_2';
 % cost filename
 cost_name = 'velocityCost'; % NOTE:specify costFunction parameters below
 
-sim_time_step = 1e-2;       % simulation timestep
+sim_time_step = 5e-3;       % simulation timestep
 total_sim_steps = 5000;     % total number of simulation timesteps
-controller_horizon = 10;%5; % MPC horizon for controller
+controller_horizon = 40;%5; % MPC horizon for controller
 actuation_mode = 1;         % 1-cables, 2-rods, 3-both 
 
 % dynamics generation parameters
-save_dynamics_file = true;
-optimize_flag = true;
-optimized_dynamics_filename = 'optimizedDynamics_SixBar_19_08_28_15_53_23';
+save_dynamics_file = false;
+optimize_flag = false;
+optimized_dynamics_filename = '';%'optimizedDynamics_SixBar_19_08_28_15_53_23';
 
 % save data
 log_toggle =  true; % toggle flag to save simulation data to external file
 save_period = 10;   % how often to save data (e.g., every 50 timesteps)
 
 % forward simulation / initial conditions
-sim_to_equilibrium = false;             % true/false
 show_initialization_graphics = false;   % true/false
-kinetic_energy_damping = false;         % true/false
+kinetic_energy_damping = true;         % true/false
 perturb_cables_percent = 0.00;          % double between 0 and 1
 perturb_rods_percent = 0.00;            % double between 0 and 1
 xy_random_rotate = false;               % true/false
@@ -68,7 +67,7 @@ time_stamp = datestr(now,'yy_mm_dd_HH_MM_SS');
 [omega,X] = feval(model_name);
 constraints = omega.constraints;
 general_forces = omega.generalForces;
-structurePlot(X,omega,constraints,camera_view_initial,1,0,1);
+structurePlot(X,omega,constraints,camera_view_initial,1,0,1,1,1);
 pause(1e-3)
 [nominal_fcn,hFcns,jacobian_fcns,Gamma,gen_forces,constr_forces,debug_fcns] = ...
     Dynamics_Generator(omega,constraints,general_forces);
@@ -222,7 +221,7 @@ if(xy_random_rotate==true)
         sin(randRotAngle),cos(randRotAngle)]*[centeredX';centeredY'];
     X.p(1:3:end) = rotatedXY(1,:); % rotated X values
     X.p(2:3:end) = rotatedXY(2,:); % rotated Y values
-    structurePlot(X,omega,constraints,camera_view_initial,1,0,1);
+    structurePlot(X,omega,constraints,camera_view_initial,1,0,1,1,1);
 end
 
 % rotate robot about X-axis
@@ -239,7 +238,7 @@ if(yz_random_rotate==true)
     X.p(2:3:end) = rotatedYZ(1,:); % rotated X values
     X.p(3:3:end) = rotatedYZ(2,:); % rotated Y values
     X.p(3:3:end) = X.p(3:3:end)-min(X.p(3:3:end)) + minZ;
-    structurePlot(X,omega,constraints,camera_view_initial,1,0,0);
+    structurePlot(X,omega,constraints,camera_view_initial,1,0,0,1,1);
 end
 
 pause(1e-3) % give time to update and redraw structurePlot
@@ -279,63 +278,61 @@ plant = feval(plant_name,X,omega,sim_time_step);
 
 %% Forward Simulate to Equilibrium (with Kinetic Energy Damping)
 % note: this occurs before Controller instantiation to update 'omega' struct
-if(sim_to_equilibrium)
-    forwardSimIter = 1;
-    kineticEnergy_prev = 0;
-    cablesStillMoving = 1;
+forwardSimIter = 1;
+kineticEnergy_prev = 0;
+cablesStillMoving = 1;
+
+if(any(X_desired.RL<omega.cables.minLength))
+    error(['Desired restlength is less than minimum cable ',...
+        'length limits. Increase stiffness or decrease desired pretension'])
+end
+
+disp('Starting forward simulation to equilibrium...')
+if(kinetic_energy_damping)
+    disp('Kinetic Damping, Current KE:')
+end
+while((plant.getKineticEnergy()>1e-4)||... % non-negligible kinetic energy
+        plant.getKineticEnergy()==0 ||... % KE just got reset
+        cablesStillMoving) % cables haven't yet reached goal rest lengths
     
-    if(any(X_desired.RL<omega.cables.minLength))
-        error(['Desired restlength is less than minimum cable ',...
-            'length limits. Increase stiffness or decrease desired pretension'])
+    % calculate appropriate cable length / rod length
+    U.RLdot = sign(X_desired.RL - plant.Current_RL).*...
+        min(omega.cables.linear_velocity,...
+        abs(X_desired.RL - plant.Current_RL)/sim_time_step);
+    U.Ldot = zeros(size(plant.Current_L));
+    
+    % advance simulation one timestep
+    plant.stepForward(U,nominal_fcn,hFcns);
+    X.p = plant.Current_p;
+    X.pDOT = plant.Current_pDOT;
+    
+    % plot update
+    if(show_initialization_graphics==true)
+        structurePlot(X,omega,constraints,camera_view_initial,1,0,1,1,1);
+        title(['t = ',num2str(plant.simulationTime)])
+        drawnow()
     end
     
-    disp('Starting forward simulation to equilibrium...')
+    % kinetic energy damping
     if(kinetic_energy_damping)
-        disp('Kinetic Damping, Current KE:')
+        if(plant.getKineticEnergy() < kineticEnergy_prev &&...
+                forwardSimIter>3)
+            plant.Current_pDOT = zeros(size(plant.Current_pDOT));
+            kineticEnergy_prev = 0;
+            forwardSimIter = 0;
+            disp('KE Peak, wiping velocities')
+        else
+            kineticEnergy_prev = plant.getKineticEnergy();
+            fprintf('%3.2e..',kineticEnergy_prev);
+        end
     end
-    while((plant.getKineticEnergy()>1e-4)||... % non-negligible kinetic energy
-            plant.getKineticEnergy()==0 ||... % KE just got reset
-            cablesStillMoving) % cables haven't yet reached goal rest lengths
-        
-        % calculate appropriate cable length / rod length
-        U.RLdot = sign(X_desired.RL - plant.Current_RL).*...
-            min(omega.cables.linear_velocity,...
-            abs(X_desired.RL - plant.Current_RL)/sim_time_step);
-        U.Ldot = zeros(size(plant.Current_L));
-        
-        % advance simulation one timestep
-        plant.stepForward(U,nominal_fcn,hFcns);
-        X.p = plant.Current_p;
-        X.pDOT = plant.Current_pDOT;
-        
-        % plot update
-        if(show_initialization_graphics==true)
-            structurePlot(X,omega,constraints,camera_view_initial,1,0,1);
-            title(['t = ',num2str(plant.simulationTime)])
-            drawnow()
-        end
-        
-        % kinetic energy damping
-        if(kinetic_energy_damping)
-            if(plant.getKineticEnergy() < kineticEnergy_prev &&...
-                    forwardSimIter>3)
-                plant.Current_pDOT = zeros(size(plant.Current_pDOT));
-                kineticEnergy_prev = 0;
-                forwardSimIter = 0;
-                disp('KE Peak, wiping velocities')
-            else
-                kineticEnergy_prev = plant.getKineticEnergy();
-                fprintf('%3.2e..',kineticEnergy_prev);
-            end
-        end
-        
-        % cables reach desired initial (perturbed) state
-        if(norm(plant.Current_RL-X_desired.RL)<1e-6)
-            cablesStillMoving = 0;
-        end
-        
-        forwardSimIter = forwardSimIter+1;
+    
+    % cables reach desired initial (perturbed) state
+    if(norm(plant.Current_RL-X_desired.RL)<1e-6)
+        cablesStillMoving = 0;
     end
+    
+    forwardSimIter = forwardSimIter+1;
 end
 plant.resetClock(); % reset simulation time for recordkeeping
 omega.X.p0 = plant.Current_p; % record equilibrium state for reference
@@ -428,7 +425,7 @@ for iteration = 1:total_sim_steps
     if(show_simulation_graphics)
         X.p = plant.Current_p;
         X.pDOT = plant.Current_pDOT;
-        structurePlot(X,omega,constraints,camera_view_loop,1,0,1);
+        structurePlot(X,omega,constraints,camera_view_loop,1,0,1,1,1);
         title(['t = ',num2str(plant.simulationTime)])
     end
     disp(['Simulate Plant Elapsed Time: ',num2str(toc(plantElapsed))])
@@ -505,7 +502,7 @@ for iteration = 1:total_sim_steps
             workspaceVars = who;
             try
                 save(['./Results/LatestResults_MPC_',num2str(time_stamp),'_',...
-                    model_name,'_iLQR'],...
+                    model_name,'_',controller_name],...
                     workspaceVars{not(~contains(workspaceVars, 'record'))})
             catch
                 disp('File Temporarily Unavailable')

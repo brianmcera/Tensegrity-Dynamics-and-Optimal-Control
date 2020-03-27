@@ -1,4 +1,5 @@
-function structurePlot(X,omega,constraints,camera,clearFig,cylinders,cableLabel)
+function structurePlot(X, omega, constraints, camera, clearFig, ...
+    cylinders, cableLabel, nodeLabel, rodLabel)
 % This function will plot the tensegrity structure. The inputs for this
 % function are the nodal positions, Cable Connectivity matrix, Rod
 % Connectivity matrix, and the constraint matrix. The nodes that have
@@ -30,6 +31,13 @@ color3 = omega.cables.paired(3:3:end,:);
 color1 = reshape(color1,1,numel(color1));
 color2 = reshape(color2,1,numel(color2));
 color3 = reshape(color3,1,numel(color3));
+
+if(nodeLabel)
+    for n =1:size(Verts)/3
+        text(Verts((n-1)*3+1),Verts((n-1)*3+2),Verts((n-1)*3+3)+0.02,num2str(n),'Color','black','FontSize',12);
+    end
+end
+
 for n=1:size(C,1) %For each row in C find the connected vertices and plot a cable
     index = find(C(n,:)~=0); %index of non-zero values in the nth row of C (MUST HAVE 2 ELEMENTS)
     % index correlates to the row in Verts to make a connection
@@ -74,6 +82,11 @@ for n=1:size(R,1) %For each row in R find the connected vertices and plot a rod
         
     else
         pipe = line(x,y,z); pipe.Color = 'm'; pipe.LineWidth = 3;
+    end
+    if(rodLabel)
+        mid = (Verts(index(1)*3-2:index(1)*3,:)+...
+            Verts(index(2)*3-2:index(2)*3,:))/2;
+        text(mid(1),mid(2),mid(3)+0.05,num2str(n),'Color','red','FontSize',14);
     end
 end
 view(camera);

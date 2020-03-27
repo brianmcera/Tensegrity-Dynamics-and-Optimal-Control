@@ -82,7 +82,6 @@ end
 %% Cable Forces in p-basis
 
 %calculate cable forces (Gamma) as a function of (X,U,helperVariables)
-
 C = omega.C;
 R = omega.R;
 n = size(omega.X0,1);
@@ -90,7 +89,7 @@ n = size(omega.X0,1);
 Gamma = @(X,U,hVars) zeros(n,1); %initialize cable forces as 0s
 dGammadp = @(X,U,hVars) zeros(n,n);
 dGammadRL = @(X,U,hVars) [];
-Beta = 1e-4;
+Beta = 1e-3;
 
 smax = @(x,b) (sqrt(x.^2+b^2)+x)/2; %smoothMax function
 Alpha = @(X,U,z,i) sqrt(z{i}'*z{i}/2)-X.RL(i); %nodal separation difference
@@ -153,8 +152,8 @@ for i=1:length(generalForces)
         X,U,omega,generalForces{i}.args,'dgenFdL');
 end
 
-%% prepare outputs
 
+%% prepare outputs
 W = kron(diag(1./omega.M),eye(3)); %inverse mass matrix
 Ks = 1e-4; %spring correcting feedback on G constraint forces
 Kd = 1e-4; %damping correcting feedback on G constraint forces
@@ -207,12 +206,12 @@ jacobians.dpDDOTdL = dpDDOTdL;
 jacobians.dpDDOTdRLdot = @(X,U,hVars) zeros(n,size(C,1));
 jacobians.dpDDOTdLdot = @(X,U,hVars) zeros(n,size(R,1));
 
-%RLdot input jacobian function handles <===================================== these are useless
+%RLdot input jacobian function handles  %<===================================== these are not useful right now
 jacobians.dRLdp = @(X,U,hVars) zeros(size(C,1),n);
 jacobians.dRLdpDOT = @(X,U,hVars) zeros(size(C,1),n);
 jacobians.dRLdRL = @(X,U,hVars) zeros(size(C,1),size(C,1));
 jacobians.dRLdL = @(X,U,hVars) zeros(size(C,1),size(R,1));
-jacobians.dRLdRLdot = @(X,U,hVars) eye(size(C,1));%omega.cableConstraintMatrix;
+jacobians.dRLdRLdot = @(X,U,hVars) eye(size(C,1));
 jacobians.dRLdLdot = @(X,U,hVars) zeros(size(C,1),size(R,1));
 %Ldot input jacobian function handles
 jacobians.dLdp = @(X,U,hVars) zeros(size(R,1),n);
@@ -220,7 +219,7 @@ jacobians.dLdpDOT = @(X,U,hVars) zeros(size(R,1),n);
 jacobians.dLdRL = @(X,U,hVars) zeros(size(R,1),size(C,1));
 jacobians.dLdL = @(X,U,hVars) zeros(size(R,1),size(R,1));
 jacobians.dLdRLdot = @(X,U,hVars) zeros(size(R,1),size(C,1));
-jacobians.dLdLdot = @(X,U,hVars) eye(size(R,1));%omega.rodConstraintMatrix;
+jacobians.dLdLdot = @(X,U,hVars) eye(size(R,1));
 
 
 

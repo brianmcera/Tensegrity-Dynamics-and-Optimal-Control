@@ -21,7 +21,7 @@ rng('shuffle')
 %% User-defined Parameters ////////////////////////////////////////////////
 
 % model filename 
-model_name = 'six_bar_model_DROP';
+model_name = 'six_bar_model_Payload_DROP';
 % plant filename 
 plant_name = 'DefaultPlant';
 % observer filename 
@@ -37,9 +37,9 @@ controller_horizon = 10;    % MPC horizon for controller
 actuation_mode = 1;         % 1-cables, 2-rods, 3-both 
 
 % dynamics generation parameters
-save_dynamics_file = true;
-optimize_flag = true;
-optimized_dynamics_filename = 'optimizedDynamics_SixBar-DROP_20_03_23_18_50';
+save_dynamics_file = false;
+optimize_flag = false;
+optimized_dynamics_filename = '';
 
 % save data
 log_toggle =  true; % toggle flag to save simulation data to external file
@@ -47,7 +47,7 @@ save_period = 200;  % how often to save data (e.g., every 50 timesteps)
 
 % forward simulation / initial conditions
 show_initialization_graphics = false;   % true/false
-kinetic_energy_damping = false;         % true/false
+kinetic_energy_damping = true;         % true/false
 perturb_cables_percent = 0.00;          % double between 0 and 1
 perturb_rods_percent = 0.00;            % double between 0 and 1
 xy_random_rotate = true;                % true/false
@@ -67,7 +67,7 @@ time_stamp = datestr(now,'yy_mm_dd_HH_MM_SS');
 [omega,X] = feval(model_name);
 constraints = omega.constraints;
 general_forces = omega.generalForces;
-structurePlot(X,omega,constraints,camera_view_initial,1,0,1);
+structurePlot(X,omega,constraints,camera_view_initial,1,0,1,1,1);
 pause(1e-3)
 [nominal_fcn,hFcns,jacobian_fcns,Gamma,gen_forces,constr_forces,debug_fcns] = ...
     Dynamics_Generator(omega,constraints,general_forces);
@@ -221,7 +221,7 @@ if(xy_random_rotate==true)
         sin(randRotAngle),cos(randRotAngle)]*[centeredX';centeredY'];
     X.p(1:3:end) = rotatedXY(1,:); % rotated X values
     X.p(2:3:end) = rotatedXY(2,:); % rotated Y values
-    structurePlot(X,omega,constraints,camera_view_initial,1,0,1);
+    structurePlot(X,omega,constraints,camera_view_initial,1,0,1,1,1);
 end
 
 % rotate robot about X-axis
@@ -238,7 +238,7 @@ if(yz_random_rotate==true)
     X.p(2:3:end) = rotatedYZ(1,:); % rotated X values
     X.p(3:3:end) = rotatedYZ(2,:); % rotated Y values
     X.p(3:3:end) = X.p(3:3:end)-min(X.p(3:3:end)) + minZ;
-    structurePlot(X,omega,constraints,camera_view_initial,1,0,0);
+    structurePlot(X,omega,constraints,camera_view_initial,1,0,0,1,1);
 end
 
 pause(1e-3) % give time to update and redraw structurePlot
@@ -291,7 +291,7 @@ while((plant.getKineticEnergy()>1e-4)||... % non-negligible kinetic energy
     
     % plot update
     if(show_initialization_graphics==true)
-        structurePlot(X,omega,constraints,camera_view_initial,1,0,1);
+        structurePlot(X,omega,constraints,camera_view_initial,1,0,1,1,1);
         title(['t = ',num2str(plant.simulationTime)])
         drawnow()
     end
@@ -322,6 +322,7 @@ omega.X.p0 = plant.Current_p; % record equilibrium state for reference
 
 plant.Current_p(3:3:end) = plant.Current_p(3:3:end)+0.5;
 plant.Current_pDOT(3:3:end) = -15;  % set impact velocity to 15 m/s
+plant.Current_pDOT(1:3:end) = 15;  % set impact velocity to 15 m/s
 
 %% Instantiate Record Arrays for Data Storage
 % **include 'record' in filename for automated storage**
@@ -373,7 +374,7 @@ for iteration = 1:total_sim_steps
     if(show_simulation_graphics)
         X.p = plant.Current_p;
         X.pDOT = plant.Current_pDOT;
-        structurePlot(X,omega,constraints,camera_view_loop,1,0,1);
+        structurePlot(X,omega,constraints,camera_view_loop,1,0,1,1,1);
         title(['t = ',num2str(plant.simulationTime)])
         pause(1e-3)
     end
