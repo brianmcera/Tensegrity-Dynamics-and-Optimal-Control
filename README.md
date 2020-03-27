@@ -39,6 +39,11 @@ To examine and visualize a specific tensegrity topology, run the associate model
 >> structurePlot(X,omega,constraints,3,1,1,1,1,1)
 ```
 
+To simply run a simulated drop test, call the top-level function which features no actuation or state estimation:
+```bash
+>> SimpleDynamicSimulation
+```
+
 **TODO: Explain User-Defined Parameters (Maybe consider a separate config file?)**
 
 
