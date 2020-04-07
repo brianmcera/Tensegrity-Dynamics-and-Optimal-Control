@@ -27,23 +27,23 @@ plant_name = 'DefaultPlant';
 % observer filename
 observer_name = 'DefaultObserver';
 % controller filename
-controller_name = 'iLQR_RollingDirection_2';
+controller_name = 'iLQR_RollingDirection';
 % cost filename
 cost_name = 'velocityCost'; % NOTE:specify costFunction parameters below
 
-sim_time_step = 5e-3;       % simulation timestep
+sim_time_step = 1e-1;       % simulation timestep
 total_sim_steps = 5000;     % total number of simulation timesteps
-controller_horizon = 40;%5; % MPC horizon for controller
+controller_horizon = 20;%5; % MPC horizon for controller
 actuation_mode = 1;         % 1-cables, 2-rods, 3-both 
 
 % dynamics generation parameters
 save_dynamics_file = false;
 optimize_flag = false;
-optimized_dynamics_filename = '';%'optimizedDynamics_SixBar_19_08_28_15_53_23';
+optimized_dynamics_filename = 'optimizedDynamics_SixBar_20_03_26_10_19_07';
 
 % save data
 log_toggle =  true; % toggle flag to save simulation data to external file
-save_period = 10;   % how often to save data (e.g., every 50 timesteps)
+save_period = 100;   % how often to save data (e.g., every 50 timesteps)
 
 % forward simulation / initial conditions
 show_initialization_graphics = false;   % true/false

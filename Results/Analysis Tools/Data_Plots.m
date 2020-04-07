@@ -114,7 +114,7 @@ t_time = find((X_record.p(1,:)),1,'last');
 omega = simulationParameters_record.omega;
 constraints = [];
 
-for i = t_start:5:t_time
+for i = t_start:20:t_time
     %pause()
     if(~isolateNodes)
         Xbar.p = X_record.p(:,i);
@@ -187,25 +187,25 @@ for i = t_start:5:t_time
     plot3(X_record.p(hNode*3-2,i),X_record.p(hNode*3-1,i),...
         X_record.p(hNode*3,i),'rp','linewidth',3);
     
-%     %plot desired direction
-%     if(plotDirection)
-%         Centroid_pos = [mean(X_record.p(1:3:end,i));...
-%             mean(X_record.p(2:3:end,i));...
-%             mean(X_record.p(3:3:end,i))];
-%         lead_direction = [controllerOutputArgs_record{i}.desDirection];
-%         quiver3(Centroid_pos(1),Centroid_pos(2),Centroid_pos(3),...
-%             lead_direction(1)/5,lead_direction(2)/5,lead_direction(3)/5,'b','linewidth',1);
-%     end
+    %plot desired direction
+    if(plotDirection)
+        Centroid_pos = [mean(X_record.p(1:3:end,i));...
+            mean(X_record.p(2:3:end,i));...
+            mean(X_record.p(3:3:end,i))];
+        lead_direction = [controllerOutputArgs_record{i}.desDirection];
+        quiver3(Centroid_pos(1),Centroid_pos(2),Centroid_pos(3),...
+            lead_direction(1)/5,lead_direction(2)/5,lead_direction(3)/5,'b','linewidth',1);
+    end
     
-%     %plot COM
-%     if(plotCOM)
-%         Centroid_pos = [mean(X_record.p(1:3:end,i));...
-%             mean(X_record.p(2:3:end,i));...
-%             mean(X_record.p(3:3:end,i))];
-%         plot3([Centroid_pos(1) Centroid_pos(1)],...
-%             [Centroid_pos(2) Centroid_pos(2)],...
-%             [Centroid_pos(3) baseFloor],'r--p','linewidth',5);
-%     end
+    %plot COM
+    if(plotCOM)
+        Centroid_pos = [mean(X_record.p(1:3:end,i));...
+            mean(X_record.p(2:3:end,i));...
+            mean(X_record.p(3:3:end,i))];
+        plot3([Centroid_pos(1) Centroid_pos(1)],...
+            [Centroid_pos(2) Centroid_pos(2)],...
+            [Centroid_pos(3) baseFloor],'r--p','linewidth',2);
+    end
     
     zlim([0 1])
     pause(dt/10)

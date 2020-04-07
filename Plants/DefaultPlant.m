@@ -56,10 +56,6 @@ classdef DefaultPlant < handle
             Uinput.Ldot = max(Uinput.Ldot,(obj.rodMinLength-obj.Current_L)/obj.dT);
             Uinput.Ldot = min(Uinput.Ldot,(obj.rodMaxLength-obj.Current_L)/obj.dT);
             
-            %{
-                    **TODO: HANDLE TENSION CONSTRAINTS
-            %}
-            
             %forward simulate dynamics with ODE solver
             XIN = [obj.Current_p;obj.Current_pDOT;...
                 obj.Current_RL;obj.Current_L];
