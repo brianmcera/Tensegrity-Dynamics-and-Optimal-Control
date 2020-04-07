@@ -319,10 +319,6 @@ classdef ExtendedKalmanFilter_IMUEncoder < handle
             Uinput.Ldot = min(Uinput.Ldot,...
                 (obj.modelInfo.rods.maxLength-xHat_m.L)/obj.dT);
             
-            %{
-                    **TODO: HANDLE TENSION CONSTRAINTS
-            %}
-            
             %forward simulate dynamics with ODE solver
             XIN = [xHat_m.p;xHat_m.pDOT;xHat_m.RL;xHat_m.L];
             [~,XOUT] = ode45(@(t,Xstacked)...
