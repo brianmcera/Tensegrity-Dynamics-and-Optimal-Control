@@ -24,6 +24,7 @@ if(clearFig)
     cla
 end
 grid on; hold on; xlabel('X'); ylabel('Y'); zlabel('Z');
+set(gca,'xminorgrid','on','yminorgrid','on')
 
 color1 = omega.cables.paired(1:3:end,:);
 color2 = omega.cables.paired(2:3:end,:);
@@ -96,7 +97,7 @@ xCOM = mean(X.p(1:3:end));
 yCOM = mean(X.p(2:3:end));
 Xrange = 0.5;%range(X.p(1:3:end));
 Yrange = 0.5;%range(X.p(2:3:end));
-zlim([-0.1 1])
+zlim([max(-0.1, mean(X.p(3:3:end)-0.6)), max(1, mean(X.p(3:3:end)+0.5))])
 xlim([xCOM-Xrange*1 xCOM+Xrange*1])
 ylim([yCOM-Yrange*1 yCOM+Yrange*1])
 

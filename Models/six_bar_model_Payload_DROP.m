@@ -1,4 +1,4 @@
-function [omega,X,U,constraints,generalForces] = six_bar_model_Payload_similar()
+function [omega,X,U,constraints,generalForces] = six_bar_model_Payload_DROP()
 
 %% DEFINE ROD/CABLE PHYSICAL PARAMETERS
 omega.rods.linear_velocity = 1*ones(7,1);
@@ -10,8 +10,8 @@ omega.rods.constrained = [];
 omega.M = [0.572/12*ones(12,1);
     0.461/2; 0.461/2];
 
-omega.cables.stiffness = [253*ones(24,1);371*ones(12,1)];%375*ones(24,1);%
-omega.cables.pretension = 10*ones(36,1);%25*ones(24,1);%
+omega.cables.stiffness = [200*ones(24,1);200*ones(12,1)];%375*ones(24,1);%
+omega.cables.pretension = 20*ones(36,1);%25*ones(24,1);%
 omega.cables.linear_velocity = 0.10*ones(36,1);
 omega.cables.unactuated = zeros(36,1);
 omega.cables.maxLength = 1.00*ones(36,1);
@@ -202,7 +202,7 @@ baseFloor = min(X.p(3:3:end))-1e-3;
 omega.generalForces{1}.filename = 'FloorForceVertical_XIncline';
 omega.generalForces{1}.args.baseFloor = baseFloor;
 omega.generalForces{1}.args.stiffness = 5e4; %5e2
-omega.generalForces{1}.args.damping = 1e-1; %3e1
+omega.generalForces{1}.args.damping = 1e-2; %3e1
 omega.generalForces{1}.args.Beta = 1e-3;
 omega.generalForces{1}.args.incline = 0;
 
@@ -210,12 +210,12 @@ omega.generalForces{2}.filename = 'Gravity';
 omega.generalForces{2}.args.gravity = 9.81;
 
 omega.generalForces{3}.filename = 'GeneralXYZDamping';
-omega.generalForces{3}.args.damping = 1e-1;
+omega.generalForces{3}.args.damping = 1e-3;
 
 omega.generalForces{4}.filename = 'FloorForceHorizontal_ViscousFriction';
 omega.generalForces{4}.args.baseFloor = baseFloor;
 omega.generalForces{4}.args.damping = 5e1;
-omega.generalForces{4}.args.Beta = 1e-3;
+omega.generalForces{4}.args.Beta = 1e-2;
 
 
 

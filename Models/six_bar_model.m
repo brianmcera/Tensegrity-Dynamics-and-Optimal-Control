@@ -165,7 +165,7 @@ omega.generalForces{3}.args.damping = 5e-1;
 
 omega.generalForces{4}.filename = 'FloorForceHorizontal_ViscousFriction';
 omega.generalForces{4}.args.baseFloor = baseFloor;
-omega.generalForces{4}.args.damping = 5e1;
+omega.generalForces{4}.args.damping = 5e-1;
 omega.generalForces{4}.args.Beta = 1e-3;
 
 

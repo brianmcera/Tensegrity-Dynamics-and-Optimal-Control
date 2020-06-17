@@ -32,7 +32,7 @@ controller_name = '';
 cost_name = '';  
 
 sim_time_step = 5e-3;       % simulation timestep
-total_sim_steps = 5000;     % total number of simulation timesteps
+total_sim_steps = 750;     % total number of simulation timesteps
 controller_horizon = 10;    % MPC horizon for controller
 actuation_mode = 1;         % 1-cables, 2-rods, 3-both 
 
@@ -321,8 +321,8 @@ plant.resetClock(); % reset simulation time for recordkeeping
 omega.X.p0 = plant.Current_p; % record equilibrium state for reference
 
 plant.Current_p(3:3:end) = plant.Current_p(3:3:end)+0.5;
-plant.Current_pDOT(3:3:end) = -15;  % set impact velocity to 15 m/s
-plant.Current_pDOT(1:3:end) = 15;  % set impact velocity to 15 m/s
+plant.Current_pDOT(3:3:end) = -5;  % set impact velocity to 15 m/s
+plant.Current_pDOT(1:3:end) = 14;  % set impact velocity to 15 m/s
 
 %% Instantiate Record Arrays for Data Storage
 % **include 'record' in filename for automated storage**

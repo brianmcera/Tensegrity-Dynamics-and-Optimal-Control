@@ -94,7 +94,7 @@ az = 0; %azimuthal camera angle
 isolateNodes = false; % only plot nodes
 plot_openLoopTraj = false; % MPC OpenLoop Trajectories for each node
 highlightSupportNodes = false; % plot the nodes in contact with the ground
-plotDirection = true; %show 
+plotDirection = false; %show 
 plotCOM = true;
 recordVideo = false;
 
@@ -114,7 +114,7 @@ t_time = find((X_record.p(1,:)),1,'last');
 omega = simulationParameters_record.omega;
 constraints = [];
 
-for i = t_start:20:t_time
+for i = t_start:10:t_time
     %pause()
     if(~isolateNodes)
         Xbar.p = X_record.p(:,i);
@@ -135,6 +135,7 @@ for i = t_start:20:t_time
     CoM = [mean(X_record.p(1:3:end,i));
         mean(X_record.p(2:3:end,i));
         mean(X_record.p(3:3:end,i))];
+    baseFloor = min(X_record.p(3:3:end,1))+5e-3;
     fill3([CoM(1)+1;CoM(1)+1;CoM(1)-1;CoM(1)-1],...
         [CoM(2)+1;CoM(2)-1;CoM(2)-1;CoM(2)+1],...
         ones(4,1)*baseFloor,[0.3 0.3 0.3],'facealpha',0.5)
@@ -172,7 +173,7 @@ for i = t_start:20:t_time
             view(0,0)
         end
     end
-    baseFloor = min(X_record.p(3:3:end,1))+5e-3;
+
     if(highlightSupportNodes)
         for node = 1:length(X_record.p(:,1))/3
             if(X_record.p(node*3,i)<=baseFloor)
@@ -207,7 +208,7 @@ for i = t_start:20:t_time
             [Centroid_pos(3) baseFloor],'r--p','linewidth',2);
     end
     
-    zlim([0 1])
+    %zlim([0 max(1, mean(X_record.p(3:3:end))+0.5)])
     pause(dt/10)
     
     if(recordVideo)
@@ -802,7 +803,7 @@ title('Rod Lengths over Time','fontsize',20)
 ylabel('Rod Lengths [cm]','fontsize',20)
 xlabel('Time [s]','fontsize',20)
 
-%% Cable Tensions
+%% Cable  Tensions
 figure(3)
 subplot(2,1,1)
 t_start = 1;

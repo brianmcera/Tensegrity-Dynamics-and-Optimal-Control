@@ -90,13 +90,13 @@ classdef iLQRminimax_RollingDirection_2 < handle
             
             % cable deviation penalty matrix (the state x.RL should be the
             % deviation from XRef.RL or actual state itself)
-            cableDeviationPenalty = 5e1;
+            cableDeviationPenalty = 1e-1;
             obj.Q(obj.nX_p+obj.nX_pDOT+1:obj.nX_p+obj.nX_pDOT+obj.nX_RL,...
                 obj.nX_p+obj.nX_pDOT+1:obj.nX_p+obj.nX_pDOT+obj.nX_RL) = ...
                 cableDeviationPenalty*eye(obj.nX_RL); %1e0 works for 6-bar,
             
             % velocity input penalty
-            cableVel_cost = 1e-1;
+            cableVel_cost = 5e-4;
             obj.R = cableVel_cost*blkdiag(...
                 omega.cableConstraintMatrix'*eye(obj.nX_RL)*omega.cableConstraintMatrix,...
                 eye(obj.nX_L)); %~1e-2 works for dT=1e-3; 5e1 works for dT=5e-3
@@ -262,6 +262,10 @@ classdef iLQRminimax_RollingDirection_2 < handle
             % iterative process, it calculates inputs/disturbances thath
             % have reached some sort of dynamic game equilibrium.
             
+            %initial guess
+            N = obj.horizon;
+            obj.uGuess = repmat(obj.uGuess(:,2),1,N+1);
+            
             converged = 0; % initialize convergence flag to 'false'
             N = obj.horizon;
             obj.xTraj(:,1) = X0; % initial state
@@ -283,7 +287,7 @@ classdef iLQRminimax_RollingDirection_2 < handle
             Jww = zeros(obj.nW,obj.nW,N);
             Juw = zeros(obj.nU,obj.nW,N);
                                         
-            bestCost = nan;
+            bestCost = 1e8;
             Alpha = 1;
             
             % initialize value functions along current trajectory
@@ -302,7 +306,7 @@ classdef iLQRminimax_RollingDirection_2 < handle
                 
             %ITERATIVE LINEARIZATION OUTER-LOOP
             while(~converged) 
-                Alpha = min(1,Alpha*2); %increase linesearch stepsize
+                Alpha = 1;%min(1,Alpha*2); %increase linesearch stepsize
                        
                 %record 
                 VTemp = obj.V;
@@ -413,8 +417,8 @@ classdef iLQRminimax_RollingDirection_2 < handle
                     obj.Kgains(1:obj.nU,:,t) = [G_ut,g_ut];
                     obj.Kgains(obj.nU+1:end,:,t) = [G_wt,g_wt];
                     
-                    %debugging for now
-                    obj.Kgains(obj.nU+1:end,:,t) = 0;%!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
+%                     %debugging for now
+%                     obj.Kgains(obj.nU+1:end,:,t) = 0;%!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
                     
                     %zero out gain on rods (fix this later, should look at
                     %rod velocity constraints instead of hardcoding)
@@ -428,6 +432,7 @@ classdef iLQRminimax_RollingDirection_2 < handle
                 %linesearch
                 uTemp = obj.uGuess;
                 wTemp = obj.wGuess;
+                xTemp = obj.xTraj;
                 
                 %BACKTRACKING LINESEARCH INNER-LOOP
                 velExceeded=[];
@@ -481,7 +486,7 @@ classdef iLQRminimax_RollingDirection_2 < handle
                     for t = 1:N                                                
                         %add affine terms to input/disturbance
                         obj.uGuess(:,t) = obj.uGuess(:,t)+Alpha*obj.Kgains(1:size(obj.uGuess,1),end,t);
-%                         obj.wGuess(:,t) = obj.wGuess(:,t)+Alpha*obj.Kgains(size(obj.uGuess,1)+1:end,end,t);
+                        obj.wGuess(:,t) = obj.wGuess(:,t)+Alpha*obj.Kgains(size(obj.uGuess,1)+1:end,end,t);
                         
                         %check input constraint violation
                         checkConstraints = 1;
@@ -510,7 +515,7 @@ classdef iLQRminimax_RollingDirection_2 < handle
                         
                         %feedback update for input/disturbance
                         obj.uGuess(:,t) = obj.uGuess(:,t)+Khat(1:size(obj.uGuess,1),:)*[deltaX(:,t);0];
-%                         obj.wGuess(:,t) = obj.wGuess(:,t)+Khat(size(obj.uGuess,1)+1:end,:)*[deltaX(:,t);0];
+                        obj.wGuess(:,t) = obj.wGuess(:,t)+Khat(size(obj.uGuess,1)+1:end,:)*[deltaX(:,t);0];
                         
                         %check constraints after feedback update
                         if(checkConstraints)
@@ -546,7 +551,7 @@ classdef iLQRminimax_RollingDirection_2 < handle
                     bestCost = min(bestCost,currCost);
                     
                     if(1) %toggle on/off for debugging
-                        %costDiff = cost-currCost
+                        costDiff = cost-currCost
                         figure(2)
 %                         plot(obj.uGuess')
 %                         hold on
@@ -568,32 +573,32 @@ classdef iLQRminimax_RollingDirection_2 < handle
                     end
                       
                     Alpha
-                    if(calculateCost(obj,Xref,Q,R,G)<=cost)
+                    if(currCost < cost)
                         %disp('Finished Line Search')
                         %                         Alpha
+                        if(cost-currCost < 1e-3)
+                            converged = true;
+                        end
                         break
 %                     if(checkArmijo(obj,deltaX,obj.uGuess-uTemp,obj.wGuess-wTemp,Xref,Q,R,G,cost,currCost,0.5))
 %                         %disp('Finished Line Search')
 %                         %                         Alpha
 %                         break
-                    elseif(Alpha<1e-2)
-                        disp('Alpha small, moving on')
-%                         diff = cost-currCost
-                        converged = 1;
-                        break
                     else
                         % reset inputs, reduce line search stepsize
-%                         obj.uGuess = uTemp;
-%                         obj.wGuess = wTemp;
-                        %                         obj.xTraj = xTemp;
-                        
+                        obj.uGuess = uTemp;
+                        obj.wGuess = wTemp;
+                        obj.xTraj = xTemp;
 %                         sum(abs(obj.V-VTemp))
 %                         if(sum(abs(obj.V-VTemp))<1e-3)
 %                             converged=1;
 %                         end
-                
                         Alpha = Alpha/2;
-                        
+                        if(Alpha<1e-2)
+                            disp('Alpha small, moving on')
+                            converged = 1;
+                            break
+                        end
 %                         obj.V = VTemp;
 %                         obj.Vx = VxTemp;
 %                         obj.Vxx = VxxTemp;
@@ -612,11 +617,11 @@ classdef iLQRminimax_RollingDirection_2 < handle
                 
                 
                     
-                if(max(max(abs(obj.uGuess(:,:)-uTemp(:,:))))<1e-4 &&...
-                        max(max(abs(obj.wGuess(:,:)-wTemp(:,:))))<1e-4)
-                    converged = 1;
-                    disp('First few inputs converged, moving on...')
-                end                               
+%                 if(max(max(abs(obj.uGuess(:,:)-uTemp(:,:))))<1e-4 &&...
+%                         max(max(abs(obj.wGuess(:,:)-wTemp(:,:))))<1e-4)
+%                     converged = 1;
+%                     disp('First few inputs converged, moving on...')
+%                 end                               
             end
             
             U_optimal = obj.uGuess;
