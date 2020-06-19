@@ -105,20 +105,23 @@ classdef iLQRminimax_RollingDirection_2 < handle
                 rodVel_cost*eye(obj.nX_L); %penalize rod actuation heavily
             
             % Disturbance Penalty
-            obj.G = 1e8*eye(obj.nX);
+            obj.G = 1e-2*eye(obj.nX);
                   
             % Array of Input Feedback Gains
             obj.Kgains = zeros(obj.nU+obj.nW,obj.nX+2,horizon+1);
                                     
             % Initialize iLQR input variables
             obj.uGuess = 1e-2*randn(size(omega.cableConstraintMatrix,2)+obj.nX_L,horizon);
+%             obj.uGuess = 0*randn(size(omega.cableConstraintMatrix,2)+obj.nX_L,horizon);
             obj.uGuess(end-obj.nX_L+1:end,:)=zeros(obj.nX_L,size(obj.uGuess,2));
             
             % Initialize iLQR disturbance variables
             obj.wGuess = zeros(obj.nX,horizon);
             obj.wBounds = zeros(obj.nX,1);
             obj.wBounds(obj.nX_p+obj.nX_pDOT+1:obj.nX_p+obj.nX_pDOT+obj.nX_RL) = ...
-                1e-2*ones(obj.nX_RL,1); %only allow RL disturbances for now
+                1e-2*ones(obj.nX_RL,1); % RL disturbances
+            obj.wBounds(1:obj.nX_p) = ...
+                1e-2*ones(obj.nX_p,1); % position disturbances
             
             % Forward simulate to get initial state trajectory
             % !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!! might not need this
@@ -264,7 +267,7 @@ classdef iLQRminimax_RollingDirection_2 < handle
             
             %initial guess
             N = obj.horizon;
-            obj.uGuess = repmat(obj.uGuess(:,2),1,N+1);
+            %obj.uGuess = repmat(obj.uGuess(:,2),1,N+1);
             
             converged = 0; % initialize convergence flag to 'false'
             N = obj.horizon;
@@ -393,11 +396,11 @@ classdef iLQRminimax_RollingDirection_2 < handle
                     Jww(:,:,t) = -2*obj.discount^(t-1)*G + Fw'*obj.Vxx(:,:,t+1)*Fw;
                     Juw(:,:,t) = Fu'*obj.Vxx(:,:,t+1)*Fw;
                     
-%                     %regularize Hessians
+                    %regularize Hessians
                     rho = 1e-3;
-%                     Juu(:,:,t) = Juu(:,:,t) + (abs(min(real(eig(Juu(:,:,t)))))+rho)*eye(obj.nU);
-%                     Jww(:,:,t) = Jww(:,:,t) + (abs(min(real(eig(Jww(:,:,t)))))+rho)*eye(obj.nW);
-%                     Jxx(:,:,t) = Jxx(:,:,t) + (abs(min(0,min(real(eig(Jxx(:,:,t))))))+rho)*eye(obj.nX+1);
+%                     Juu(:,:,t) = Juu(:,:,t) + (max(0,-min(real(eig(Juu(:,:,t)))))+rho)*eye(obj.nU);
+%                     Jww(:,:,t) = Jww(:,:,t) + (min(0,-max(real(eig(Jww(:,:,t)))))-rho)*eye(obj.nW);
+%                     Jxx(:,:,t) = Jxx(:,:,t) + (max(0,-min(real(eig(Jxx(:,:,t)))))+rho)*eye(obj.nX+1);
                     
                     %calculate optimal inputs and feedback gains
                     K_ut = inv(eye(obj.nU)-Juu(:,:,t)\Juw(:,:,t)/...
@@ -576,9 +579,9 @@ classdef iLQRminimax_RollingDirection_2 < handle
                     if(currCost < cost)
                         %disp('Finished Line Search')
                         %                         Alpha
-                        if(cost-currCost < 1e-3)
-                            converged = true;
-                        end
+%                         if(cost-currCost < 1e-3 )
+%                             converged = true;
+%                         end
                         break
 %                     if(checkArmijo(obj,deltaX,obj.uGuess-uTemp,obj.wGuess-wTemp,Xref,Q,R,G,cost,currCost,0.5))
 %                         %disp('Finished Line Search')
@@ -594,7 +597,7 @@ classdef iLQRminimax_RollingDirection_2 < handle
 %                             converged=1;
 %                         end
                         Alpha = Alpha/2;
-                        if(Alpha<1e-2)
+                        if(Alpha<1e-3)
                             disp('Alpha small, moving on')
                             converged = 1;
                             break
