@@ -18,10 +18,6 @@ classdef iLQRminimax_RollingDirection_2 < handle
         R
         G
         P
-        nX_p
-        nX_pDOT
-        nX_RL
-        nX_L
         nX
         nU_RLdot
         nU_Ldot
@@ -71,69 +67,69 @@ classdef iLQRminimax_RollingDirection_2 < handle
             obj.cableMaxLength = omega.cables.maxLength;
             
             % important dimensions
-            obj.nX_p = numel(X.p);
-            obj.nX_pDOT = numel(X.pDOT);
-            obj.nX_RL = numel(X.RL);
-            obj.nX_L = numel(X.L);
-            obj.nX = obj.nX_p+obj.nX_pDOT+obj.nX_RL+obj.nX_L; %full state dimension
+            obj.nX.p = numel(X.p);
+            obj.nX.pDOT = numel(X.pDOT);
+            obj.nX.RL = numel(X.RL);
+            obj.nX.L = numel(X.L);
+            obj.nX.total = obj.nX.p+obj.nX.pDOT+obj.nX.RL+obj.nX.L; %full state dimension
             obj.nU_RLdot = size(omega.cableConstraintMatrix,2); %constrained cable inputs
             obj.nU_Ldot = size(omega.rodConstraintMatrix,2); %constrained rod inputs
             obj.nU = obj.nU_RLdot + obj.nU_Ldot; %full input dimension
-            obj.nW = obj.nX; %full disturbance dimension
+            obj.nW = obj.nX.total; %full disturbance dimension
             
             % input constraint mappings
             obj.cableConstraintMatrix = omega.cableConstraintMatrix;
             obj.rodConstraintMatrix = omega.rodConstraintMatrix;
             
             %state penalty matrix
-            obj.Q = zeros(obj.nX+1);
+            obj.Q = zeros(obj.nX.total+1);
             
             % cable deviation penalty matrix (the state x.RL should be the
             % deviation from XRef.RL or actual state itself)
             cableDeviationPenalty = 1e-1;
-            obj.Q(obj.nX_p+obj.nX_pDOT+1:obj.nX_p+obj.nX_pDOT+obj.nX_RL,...
-                obj.nX_p+obj.nX_pDOT+1:obj.nX_p+obj.nX_pDOT+obj.nX_RL) = ...
-                cableDeviationPenalty*eye(obj.nX_RL); %1e0 works for 6-bar,
+            obj.Q(obj.nX.p+obj.nX.pDOT+1:obj.nX.p+obj.nX.pDOT+obj.nX.RL,...
+                obj.nX.p+obj.nX.pDOT+1:obj.nX.p+obj.nX.pDOT+obj.nX.RL) = ...
+                cableDeviationPenalty*eye(obj.nX.RL); %1e0 works for 6-bar,
             
             % velocity input penalty
             cableVel_cost = 5e-4;
             obj.R = cableVel_cost*blkdiag(...
-                omega.cableConstraintMatrix'*eye(obj.nX_RL)*omega.cableConstraintMatrix,...
-                eye(obj.nX_L)); %~1e-2 works for dT=1e-3; 5e1 works for dT=5e-3
+                omega.cableConstraintMatrix'*eye(obj.nX.RL)*omega.cableConstraintMatrix,...
+                eye(obj.nX.L)); %~1e-2 works for dT=1e-3; 5e1 works for dT=5e-3
             rodVel_cost = 1e6;
             obj.R(obj.nU_RLdot+1:end,obj.nU_RLdot+1:end) =...
-                rodVel_cost*eye(obj.nX_L); %penalize rod actuation heavily
+                rodVel_cost*eye(obj.nX.L); %penalize rod actuation heavily
             
             % Disturbance Penalty
-            obj.G = 1e-2*eye(obj.nX);
+            obj.G = 1e-2*eye(obj.nX.total);
                   
             % Array of Input Feedback Gains
-            obj.Kgains = zeros(obj.nU+obj.nW,obj.nX+2,horizon+1);
+            obj.Kgains = zeros(obj.nU+obj.nW,obj.nX.total+2,horizon+1);
                                     
             % Initialize iLQR input variables
-            obj.uGuess = 1e-2*randn(size(omega.cableConstraintMatrix,2)+obj.nX_L,horizon);
-%             obj.uGuess = 0*randn(size(omega.cableConstraintMatrix,2)+obj.nX_L,horizon);
-            obj.uGuess(end-obj.nX_L+1:end,:)=zeros(obj.nX_L,size(obj.uGuess,2));
+            obj.uGuess = 1e-2*randn(size(omega.cableConstraintMatrix,2)+obj.nX.L,horizon);
+%             obj.uGuess = 0*randn(size(omega.cableConstraintMatrix,2)+obj.nX.L,horizon);
+            obj.uGuess(end-obj.nX.L+1:end,:)=zeros(obj.nX.L,size(obj.uGuess,2));
             
             % Initialize iLQR disturbance variables
-            obj.wGuess = zeros(obj.nX,horizon);
-            obj.wBounds = zeros(obj.nX,1);
-            obj.wBounds(obj.nX_p+obj.nX_pDOT+1:obj.nX_p+obj.nX_pDOT+obj.nX_RL) = ...
-                1e-2*ones(obj.nX_RL,1); % RL disturbances
-            obj.wBounds(1:obj.nX_p) = ...
-                1e-2*ones(obj.nX_p,1); % position disturbances
+            obj.wGuess = zeros(obj.nX.total,horizon);
+            obj.wBounds = zeros(obj.nX.total,1);
+            obj.wBounds(obj.nX.p+obj.nX.pDOT+1:obj.nX.p+obj.nX.pDOT+obj.nX.RL) = ...
+                1e-2*ones(obj.nX.RL,1); % RL disturbances
+            obj.wBounds(1:obj.nX.p) = ...
+                1e-2*ones(obj.nX.p,1); % position disturbances
             
-            % Forward simulate to get initial state trajectory
-            % !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!! might not need this
-            obj.xTraj = zeros(obj.nX,horizon+1);
-            for k = 1:horizon
-                obj.xTraj(:,k+1) = stepForward(obj,obj.uGuess(:,k),obj.wGuess(:,k),obj.xTraj(:,k));
-            end
+%             % Forward simulate to get initial state trajectory
+%             % !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!! might not need this
+%             obj.xTraj = zeros(obj.nX.total,horizon+1);
+%             for k = 1:horizon
+%                 obj.xTraj(:,k+1) = stepForward(obj,obj.uGuess(:,k),obj.wGuess(:,k),obj.xTraj(:,k));
+%             end
             
             % Value function
             obj.V = zeros(1,horizon+1);
-            obj.Vx = zeros(obj.nX+1,horizon+1);
-            obj.Vxx = zeros(obj.nX+1,obj.nX+1,horizon+1);
+            obj.Vx = zeros(obj.nX.total+1,horizon+1);
+            obj.Vxx = zeros(obj.nX.total+1,obj.nX.total+1,horizon+1);
             
             % Discount Factor for receding horizon control
             obj.discount = 1.0;
@@ -166,27 +162,27 @@ classdef iLQRminimax_RollingDirection_2 < handle
             
             %linear penalty (mass-weighted velocity/momentum),
             velReward = 5e0;
-            obj.Q(end,obj.nX_p+1:3:obj.nX_p+obj.nX_pDOT) =...
+            obj.Q(end,obj.nX.p+1:3:obj.nX.p+obj.nX.pDOT) =...
                 -velReward/2*desiredDirection(1)*obj.omega.M/totalMass;
-            obj.Q(end,obj.nX_p+2:3:obj.nX_p+obj.nX_pDOT) =...
+            obj.Q(end,obj.nX.p+2:3:obj.nX.p+obj.nX.pDOT) =...
                 -velReward/2*desiredDirection(2)*obj.omega.M/totalMass;
-            obj.Q(end,obj.nX_p+3:3:obj.nX_p+obj.nX_pDOT) =...
+            obj.Q(end,obj.nX.p+3:3:obj.nX.p+obj.nX.pDOT) =...
                 -velReward/2*desiredDirection(3)*obj.omega.M/totalMass;
-            obj.Q(obj.nX_p+1:3:obj.nX_p+obj.nX_pDOT,end) =...
+            obj.Q(obj.nX.p+1:3:obj.nX.p+obj.nX.pDOT,end) =...
                 -velReward/2*desiredDirection(1)*obj.omega.M/totalMass;
-            obj.Q(obj.nX_p+2:3:obj.nX_p+obj.nX_pDOT,end) =...
+            obj.Q(obj.nX.p+2:3:obj.nX.p+obj.nX.pDOT,end) =...
                 -velReward/2*desiredDirection(2)*obj.omega.M/totalMass;
-            obj.Q(obj.nX_p+3:3:obj.nX_p+obj.nX_pDOT,end) =...
+            obj.Q(obj.nX.p+3:3:obj.nX.p+obj.nX.pDOT,end) =...
                 -velReward/2*desiredDirection(3)*obj.omega.M/totalMass;
                             
             %store rolling direction vector for recordkeeping
             controllerOutputArgs.desDirection = desiredDirection;
             
             %reference state for deviations
-            Xref = [zeros(obj.nX_p,1);  % N/A, unweighted penalty
-                zeros(obj.nX_pDOT,1);   % unweighted penalty
+            Xref = [zeros(obj.nX.p,1);  % N/A, unweighted penalty
+                zeros(obj.nX.pDOT,1);   % unweighted penalty
                 obj.omega.X.RL0;        % N/A neutral cable lengths
-                zeros(obj.nX_L,1)];     % N/A unweighted penalty
+                zeros(obj.nX.L,1)];     % N/A unweighted penalty
             
             %concatenated state
             Xcombined = [Xhat.p;Xhat.pDOT;Xhat.RL;Xhat.L];
@@ -218,12 +214,12 @@ classdef iLQRminimax_RollingDirection_2 < handle
             
             %prepare open-loop outputs
             N = obj.horizon;
-            OL_states.p = zeros(obj.nX_p,N+1);
-            OL_states.pDOT = zeros(obj.nX_pDOT,N+1);
-            OL_states.RL = zeros(obj.nX_RL,N+1);
-            OL_states.L = zeros(obj.nX_L,N+1);
-            OL_inputs.RLdot = zeros(obj.nX_RL,N+1);
-            OL_inputs.Ldot = zeros(obj.nX_L,N+1);
+            OL_states.p = zeros(obj.nX.p,N+1);
+            OL_states.pDOT = zeros(obj.nX.pDOT,N+1);
+            OL_states.RL = zeros(obj.nX.RL,N+1);
+            OL_states.L = zeros(obj.nX.L,N+1);
+            OL_inputs.RLdot = zeros(obj.nX.RL,N+1);
+            OL_inputs.Ldot = zeros(obj.nX.L,N+1);
             
             %parse into open-loop trajectory expected format
             if(openLoopFlag)
@@ -231,13 +227,13 @@ classdef iLQRminimax_RollingDirection_2 < handle
                     x_vec = X_OL(:,i);
                     %parse vector into struct
                     idx=0;
-                    OL_states.p(:,i) = x_vec(idx+1:idx+obj.nX_p);
-                    idx=idx+obj.nX_p;
-                    OL_states.pDOT(:,i) = x_vec(idx+1:idx+obj.nX_pDOT);
-                    idx=idx+obj.nX_pDOT;
-                    OL_states.RL(:,i) = x_vec(idx+1:idx+obj.nX_RL);
-                    idx=idx+obj.nX_RL;
-                    OL_states.L(:,i) = x_vec(idx+1:idx+obj.nX_L);
+                    OL_states.p(:,i) = x_vec(idx+1:idx+obj.nX.p);
+                    idx=idx+obj.nX.p;
+                    OL_states.pDOT(:,i) = x_vec(idx+1:idx+obj.nX.pDOT);
+                    idx=idx+obj.nX.pDOT;
+                    OL_states.RL(:,i) = x_vec(idx+1:idx+obj.nX.RL);
+                    idx=idx+obj.nX.RL;
+                    OL_states.L(:,i) = x_vec(idx+1:idx+obj.nX.L);
                     if(i<=N)
                         u_vec = U_OL(:,i);
                         OL_inputs.RLdot(:,i) = obj.cableConstraintMatrix*...
@@ -267,10 +263,10 @@ classdef iLQRminimax_RollingDirection_2 < handle
             
             %initial guess
             N = obj.horizon;
-            %obj.uGuess = repmat(obj.uGuess(:,2),1,N+1);
+            obj.uGuess = repmat(obj.uGuess(:,2),1,N+1);
+            obj.wGuess = repmat(obj.wGuess(:,2),1,N+1);
             
             converged = 0; % initialize convergence flag to 'false'
-            N = obj.horizon;
             obj.xTraj(:,1) = X0; % initial state
                         
             % forward simulate to get initial state trajectory
@@ -280,12 +276,12 @@ classdef iLQRminimax_RollingDirection_2 < handle
             end
             
             % initialize Q-values for linearized approximation
-            Jx = zeros(obj.nX+1,N);
+            Jx = zeros(obj.nX.total+1,N);
             Ju = zeros(obj.nU,N);
             Jw = zeros(obj.nW,N);
-            Jxx = zeros(obj.nX+1,obj.nX+1,N);
-            Jux = zeros(obj.nU,obj.nX+1,N);
-            Jwx = zeros(obj.nW,obj.nX+1,N);
+            Jxx = zeros(obj.nX.total+1,obj.nX.total+1,N);
+            Jux = zeros(obj.nU,obj.nX.total+1,N);
+            Jwx = zeros(obj.nW,obj.nX.total+1,N);
             Juu = zeros(obj.nU,obj.nU,N);
             Jww = zeros(obj.nW,obj.nW,N);
             Juw = zeros(obj.nU,obj.nW,N);
@@ -323,12 +319,12 @@ classdef iLQRminimax_RollingDirection_2 < handle
                     
                     % parse x at timestep t
                     idx=0;
-                    Xhat.p = obj.xTraj(idx+1:obj.nX_p,t);
-                    idx = idx + obj.nX_p;
-                    Xhat.pDOT = obj.xTraj(idx+1:idx+obj.nX_pDOT,t);
-                    idx = idx + obj.nX_pDOT;
-                    Xhat.RL = obj.xTraj(idx+1:idx+obj.nX_RL,t);
-                    idx = idx + obj.nX_RL;
+                    Xhat.p = obj.xTraj(idx+1:obj.nX.p,t);
+                    idx = idx + obj.nX.p;
+                    Xhat.pDOT = obj.xTraj(idx+1:idx+obj.nX.pDOT,t);
+                    idx = idx + obj.nX.pDOT;
+                    Xhat.RL = obj.xTraj(idx+1:idx+obj.nX.RL,t);
+                    idx = idx + obj.nX.RL;
                     Xhat.L = obj.xTraj(idx+1:end,t);
                     % parse u at timestep t
                     Uhat.RLdot = obj.uGuess(1:obj.nU_RLdot,t);
@@ -346,10 +342,10 @@ classdef iLQRminimax_RollingDirection_2 < handle
                     hVars.J = obj.omega.hFcns.J(Xhat,Uhat,hVars);
                     
                     % linearized dynamics recalculated at each timestep
-                    dpDDOTdX = [obj.omega.jacobianFcns.dpDDOTdp(Xhat,Uhat,hVars),...
-                        obj.omega.jacobianFcns.dpDDOTdpDOT(Xhat,Uhat,hVars),...
-                        obj.omega.jacobianFcns.dpDDOTdRL(Xhat,Uhat,hVars),...
-                        obj.omega.jacobianFcns.dpDDOTdL(Xhat,Uhat,hVars)];
+%                     dpDDOTdX = [obj.omega.jacobianFcns.dpDDOTdp(Xhat,Uhat,hVars),...
+%                         obj.omega.jacobianFcns.dpDDOTdpDOT(Xhat,Uhat,hVars),...
+%                         obj.omega.jacobianFcns.dpDDOTdRL(Xhat,Uhat,hVars),...
+%                         obj.omega.jacobianFcns.dpDDOTdL(Xhat,Uhat,hVars)];
                     dRLdX = [obj.omega.jacobianFcns.dRLdp(Xhat,Uhat,hVars),...
                         obj.omega.jacobianFcns.dRLdpDOT(Xhat,Uhat,hVars),...
                         obj.omega.jacobianFcns.dRLdRL(Xhat,Uhat,hVars),...
@@ -363,24 +359,32 @@ classdef iLQRminimax_RollingDirection_2 < handle
                         obj.omega.jacobianFcns.dLdL(Xhat,Uhat,hVars)];
                     dLdU= [zeros(size(obj.omega.R,1),size(obj.cableConstraintMatrix,2)),...
                         obj.omega.jacobianFcns.dLdLdot(Xhat,Uhat,hVars)*obj.rodConstraintMatrix];
+                    
+                    %TESTING JACOBIAN ACCURACY
+                    [~,~,~,~,~,~,dpDDOTdX] = lsqnonlin(...
+                        @(x0)pDDOTparser(obj,x0),...
+                        [Xhat.p;Xhat.pDOT;Xhat.RL;Xhat.L],[],[],...
+                        optimset('MaxIter',0,'MaxFunEvals',0,'Algorithm',...
+                        'levenberg-marquardt',...
+                        'Display','off'));
                                         
                     %dynamics Jacobian w.r.t. states (Fx)
-                    Abar = zeros(obj.nX_p+obj.nX_pDOT+obj.nX_RL+obj.nX_L);
-                    Abar(1:obj.nX_p,obj.nX_p+1:obj.nX_p+obj.nX_pDOT) = ...
-                        eye(obj.nX_pDOT);
-                    Abar(obj.nX_p+1:end,:) = [dpDDOTdX;dRLdX;dLdX];
-                    Fx = [eye(obj.nX) + obj.dT*Abar,zeros(obj.nX,1);
-                        zeros(1,obj.nX),1];
+                    Abar = zeros(obj.nX.p+obj.nX.pDOT+obj.nX.RL+obj.nX.L);
+                    Abar(1:obj.nX.p,obj.nX.p+1:obj.nX.p+obj.nX.pDOT) = ...
+                        eye(obj.nX.pDOT);
+                    Abar(obj.nX.p+1:end,:) = [dpDDOTdX;dRLdX;dLdX];
+                    Fx = [eye(obj.nX.total) + obj.dT*Abar,zeros(obj.nX.total,1);
+                        zeros(1,obj.nX.total),1];
                     
                     %dynamics Jacobian w.r.t. input (Fu)
-                    Bbar = zeros(obj.nX_p+obj.nX_pDOT+obj.nX_RL+obj.nX_L,...
+                    Bbar = zeros(obj.nX.p+obj.nX.pDOT+obj.nX.RL+obj.nX.L,...
                         size(obj.cableConstraintMatrix,2)+size(obj.rodConstraintMatrix,2));
-                    Bbar(end-(obj.nX_RL+obj.nX_L)+1:end,:) = ...
+                    Bbar(end-(obj.nX.RL+obj.nX.L)+1:end,:) = ...
                         [dRLdU;dLdU];
                     Fu = [obj.dT*Bbar;zeros(1,obj.nU)];
                     
                     %dynamics Jacobian w.r.t. disturbance (Fw)
-                    Fw = [obj.dT*eye(obj.nX);zeros(1,obj.nW)];
+                    Fw = [obj.dT*eye(obj.nX.total);zeros(1,obj.nW)];
                     
                     %Calculate gradients/Jacobians of Q-function (J here)
                     Jx(:,t) = 2*obj.discount^(t-1)*Q*[obj.xTraj(:,t)-Xref;1] +...
@@ -400,7 +404,7 @@ classdef iLQRminimax_RollingDirection_2 < handle
                     rho = 1e-3;
 %                     Juu(:,:,t) = Juu(:,:,t) + (max(0,-min(real(eig(Juu(:,:,t)))))+rho)*eye(obj.nU);
 %                     Jww(:,:,t) = Jww(:,:,t) + (min(0,-max(real(eig(Jww(:,:,t)))))-rho)*eye(obj.nW);
-%                     Jxx(:,:,t) = Jxx(:,:,t) + (max(0,-min(real(eig(Jxx(:,:,t)))))+rho)*eye(obj.nX+1);
+%                     Jxx(:,:,t) = Jxx(:,:,t) + (max(0,-min(real(eig(Jxx(:,:,t)))))+rho)*eye(obj.nX.total+1);
                     
                     %calculate optimal inputs and feedback gains
                     K_ut = inv(eye(obj.nU)-Juu(:,:,t)\Juw(:,:,t)/...
@@ -425,7 +429,7 @@ classdef iLQRminimax_RollingDirection_2 < handle
                     
                     %zero out gain on rods (fix this later, should look at
                     %rod velocity constraints instead of hardcoding)
-                    obj.Kgains(obj.nU_RLdot+1:obj.nU_RLdot+obj.nU_Ldot,:,t) = zeros(obj.nU_Ldot,obj.nX+2);
+                    obj.Kgains(obj.nU_RLdot+1:obj.nU_RLdot+obj.nU_Ldot,:,t) = zeros(obj.nU_Ldot,obj.nX.total+2);
                 end
  
                 %calculate initial trajectory cost
@@ -437,6 +441,49 @@ classdef iLQRminimax_RollingDirection_2 < handle
                 wTemp = obj.wGuess;
                 xTemp = obj.xTraj;
                 
+                % update value function quadratic approximation
+                obj.V(end) = obj.discount^(N+1-1)*...
+                    [obj.xTraj(:,end)-Xref;1]'*Q*[obj.xTraj(:,end)-Xref;1];
+                obj.Vx(:,end) = obj.discount^(N+1-1)*2*Q*[obj.xTraj(:,end)-Xref;1];
+                obj.Vxx(:,:,end) = obj.discount^(N+1-1)*2*Q;
+                for t = N:-1:1
+                    g_ut = Alpha*obj.Kgains(1:obj.nU,end,t);
+                    G_ut = obj.Kgains(1:obj.nU,1:end-1,t);
+                    %augment inputs due to constraints
+%                     g_ut(j,:) = zeros(numel(j),1);
+%                     G_ut(j,:) = zeros(numel(j),size(G_ut,2));
+                    g_wt = Alpha*obj.Kgains(obj.nU+1:end,end,t);
+                    G_wt = obj.Kgains(obj.nU+1:end,1:end-1,t);
+                    %augment disturbances due to constraints
+%                     g_wt(distExceeded,:) = zeros(sum(distExceeded),1);
+%                     G_wt(distExceeded,:) = zeros(sum(distExceeded),size(G_wt,2));
+                    
+                    obj.V(t) = obj.V(t) + ...
+                        (g_ut'*Ju(:,t) + g_wt'*Jw(:,t)) + ...
+                        g_ut'*Juw(:,:,t)*g_wt + 1/2*...
+                        (g_ut'*Juu(:,:,t)*g_ut + g_wt'*Jww(:,:,t)*g_wt);
+                    obj.Vx(:,t) = Jx(:,t) + G_ut'*Ju(:,t) + G_wt'*Jw(:,t)...
+                        + G_ut'*Juu(:,:,t)*g_ut + Jux(:,:,t)'*g_ut +...
+                        Jwx(:,:,t)'*g_wt + G_wt'*Jww(:,:,t)*g_wt +...
+                        G_wt'*Juw(:,:,t)'*g_ut + G_ut'*Juw(:,:,t)*g_wt;
+                    
+                    obj.Vxx(:,:,t) = 1/2*(Jxx(:,:,t) +...
+                        G_ut'*Juu(:,:,t)*G_ut + G_wt'*Jww(:,:,t)*G_wt) +...
+                        G_ut'*Jux(:,:,t) + G_wt'*Jwx(:,:,t) + G_ut'*Juw(:,:,t)*G_wt;
+                    %                         obj.Vxx(:,:,t) = 1/2*(Jxx(:,:,t) +...
+                    %                             G_ut'*Juu(:,:,t)*G_ut + G_wt'*Jww(:,:,t)*G_wt +...
+                    %                             G_ut'*Jux(:,:,t) + G_wt'*Jwx(:,:,t) + G_ut'*Juw(:,:,t)*G_wt +...
+                    %                             (G_ut'*Jux(:,:,t) + G_wt'*Jwx(:,:,t) + G_ut'*Juw(:,:,t)*G_wt)');
+                    %
+                    %                         obj.V(t) = obj.V(t+1) - Ju(:,t)'/Juu(:,:,t)*Ju(:,t) -...
+                    %                             Jw(:,t)'/Jww(:,:,t)*Jw(:,t);
+                    %                         obj.Vx(:,t) = Jx(:,t) - Ju(:,t)'*Juu(:,:,t)*Jux(:,t) -...
+                    %                             Jw(:,t)'*Jww(:,:,t)*Jwx(:,t);
+                    %                         obj.Vxx(:,:,t) = Jxx(:,:,t) - ...
+                    %                             Jwx(:,:,t)'/Jww(:,:,t)*Jwx(:,:,t) -...
+                    %                             Jux(:,:,t)'/Juu(:,:,t)*Jux(:,:,t);
+                end
+                
                 %BACKTRACKING LINESEARCH INNER-LOOP
                 velExceeded=[];
                 distExceeded=[];
@@ -444,47 +491,8 @@ classdef iLQRminimax_RollingDirection_2 < handle
                 while(true) 
                     deltaX = zeros(size(obj.xTraj)); 
                     
-                    % update value function quadratic approximation
-                    obj.V(end) = obj.discount^(N+1-1)*...
-                        [obj.xTraj(:,end)-Xref;1]'*Q*[obj.xTraj(:,end)-Xref;1];
-                    obj.Vx(:,end) = obj.discount^(N+1-1)*2*Q*[obj.xTraj(:,end)-Xref;1];
-                    obj.Vxx(:,:,end) = obj.discount^(N+1-1)*2*Q;
-                    for t = N:-1:1
-                        g_ut = Alpha*obj.Kgains(1:obj.nU,end,t);
-                        G_ut = obj.Kgains(1:obj.nU,1:end-1,t);
-                        %augment due to constraints
-                        g_ut(j,:) = zeros(numel(j),1);
-                        G_ut(j,:) = zeros(numel(j),size(G_ut,2));
-                        g_wt = Alpha*obj.Kgains(obj.nU+1:end,end,t);
-                        G_wt = obj.Kgains(obj.nU+1:end,1:end-1,t);
-                        %augment due to constraints
-                        g_wt(distExceeded,:) = zeros(sum(distExceeded),1);
-                        G_wt(distExceeded,:) = zeros(sum(distExceeded),size(G_wt,2));
-                      
-                        obj.V(t) = obj.V(t) + ...
-                            (g_ut'*Ju(:,t) + g_wt'*Jw(:,t)) + ...
-                            g_ut'*Juw(:,:,t)*g_wt + 1/2*...
-                            (g_ut'*Juu(:,:,t)*g_ut + g_wt'*Jww(:,:,t)*g_wt);
-                        obj.Vx(:,t) = Jx(:,t) + G_ut'*Ju(:,t) + G_wt'*Jw(:,t)...
-                            + G_ut'*Juu(:,:,t)*g_ut + Jux(:,:,t)'*g_ut +...
-                            Jwx(:,:,t)'*g_wt + G_wt'*Jww(:,:,t)*g_wt +...
-                            G_wt'*Juw(:,:,t)'*g_ut + G_ut'*Juw(:,:,t)*g_wt;
-                        %                     obj.Vxx(:,:,t) = 1/2*(Jxx(:,:,t) +...
-                        %                         G_ut'*Juu(:,:,t)*G_ut + G_wt'*Jww(:,:,t)*G_wt) +...
-                        %                         G_ut'*Jux(:,:,t) + G_wt'*Jwx(:,:,t) + G_ut'*Juw(:,:,t)*G_wt;
-                        obj.Vxx(:,:,t) = 1/2*(Jxx(:,:,t) +...
-                            G_ut'*Juu(:,:,t)*G_ut + G_wt'*Jww(:,:,t)*G_wt +...
-                            G_ut'*Jux(:,:,t) + G_wt'*Jwx(:,:,t) + G_ut'*Juw(:,:,t)*G_wt +...
-                            (G_ut'*Jux(:,:,t) + G_wt'*Jwx(:,:,t) + G_ut'*Juw(:,:,t)*G_wt)');
-%                         
-%                         obj.V(t) = obj.V(t+1) - Ju(:,t)'/Juu(:,:,t)*Ju(:,t) -...
-%                             Jw(:,t)'/Jww(:,:,t)*Jw(:,t);
-%                         obj.Vx(:,t) = Jx(:,t) - Ju(:,t)'*Juu(:,:,t)*Jux(:,t) -...
-%                             Jw(:,t)'*Jww(:,:,t)*Jwx(:,t);
-%                         obj.Vxx(:,:,t) = Jxx(:,:,t) - ...
-%                             Jwx(:,:,t)'/Jww(:,:,t)*Jwx(:,:,t) -...
-%                             Jux(:,:,t)'/Juu(:,:,t)*Jux(:,:,t);
-                    end
+                    
+                    
                     
                     for t = 1:N                                                
                         %add affine terms to input/disturbance
@@ -511,10 +519,10 @@ classdef iLQRminimax_RollingDirection_2 < handle
                                 obj.wBounds(distExceeded);
                         end
                         Khat = obj.Kgains(:,1:end-1,t);
-                        Khat(j,:) = zeros(numel(j),obj.nX+1); 
-                        obj.Kgains(j,:,t) = zeros(numel(j),obj.nX+2); %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
-                        Khat(end-obj.nX_L+1:end,:) = zeros(obj.nX_L,obj.nX+1); %rods can't move
-                        Khat(end-obj.nX+find(distExceeded),:) = zeros(sum(distExceeded),obj.nX+1); %zero out disturbances at active constraints
+                        Khat(j,:) = zeros(numel(j),obj.nX.total+1); 
+                        obj.Kgains(j,:,t) = zeros(numel(j),obj.nX.total+2); %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+                        Khat(end-obj.nX.L+1:end,:) = zeros(obj.nX.L,obj.nX.total+1); %rods can't move
+                        Khat(end-obj.nX.total+find(distExceeded),:) = zeros(sum(distExceeded),obj.nX.total+1); %zero out disturbances at active constraints
                         
                         %feedback update for input/disturbance
                         obj.uGuess(:,t) = obj.uGuess(:,t)+Khat(1:size(obj.uGuess,1),:)*[deltaX(:,t);0];
@@ -576,7 +584,7 @@ classdef iLQRminimax_RollingDirection_2 < handle
                     end
                       
                     Alpha
-                    if(currCost < cost)
+                    if(cost-currCost > -1e-3)%(currCost < cost)
                         %disp('Finished Line Search')
                         %                         Alpha
 %                         if(cost-currCost < 1e-3 )
@@ -588,7 +596,7 @@ classdef iLQRminimax_RollingDirection_2 < handle
 %                         %                         Alpha
 %                         break
                     else
-                        % reset inputs, reduce line search stepsize
+                        % reset inputs and reduce line search stepsize
                         obj.uGuess = uTemp;
                         obj.wGuess = wTemp;
                         obj.xTraj = xTemp;
@@ -635,13 +643,13 @@ classdef iLQRminimax_RollingDirection_2 < handle
         function XOUT = stepForward(obj,u_vec,w_vec,x_vec)
             %parse input vectors into structs
             idx=0;
-            X.p = x_vec(idx+1:idx+obj.nX_p,:);
-            idx=idx+obj.nX_p;
-            X.pDOT = x_vec(idx+1:idx+obj.nX_pDOT,:);
-            idx=idx+obj.nX_pDOT;
-            X.RL = x_vec(idx+1:idx+obj.nX_RL,:);
-            idx=idx+obj.nX_RL;
-            X.L = x_vec(idx+1:idx+obj.nX_L,:);
+            X.p = x_vec(idx+1:idx+obj.nX.p,:);
+            idx=idx+obj.nX.p;
+            X.pDOT = x_vec(idx+1:idx+obj.nX.pDOT,:);
+            idx=idx+obj.nX.pDOT;
+            X.RL = x_vec(idx+1:idx+obj.nX.RL,:);
+            idx=idx+obj.nX.RL;
+            X.L = x_vec(idx+1:idx+obj.nX.L,:);
             U.RLdot = obj.cableConstraintMatrix*...
                 u_vec(1:size(obj.cableConstraintMatrix,2),:);
             U.Ldot = obj.rodConstraintMatrix*...
@@ -715,6 +723,20 @@ classdef iLQRminimax_RollingDirection_2 < handle
             satisfied = currCost<J;
         end
         
+        function pDDOT = pDDOTparser(obj,x0)
+                        % parse x
+                        idx=0;
+                        Xhat.p = x0(idx+1:obj.nX.p);
+                        idx = idx + obj.nX.p;
+                        Xhat.pDOT = x0(idx+1:idx+obj.nX.pDOT);
+                        idx = idx + obj.nX.pDOT;
+                        Xhat.RL = x0(idx+1:idx+obj.nX.RL);
+                        idx = idx + obj.nX.RL;
+                        Xhat.L = x0(idx+1:end);
+            
+                        pDDOT = obj.omega.nominalFcn.pDDOT(Xhat.p,Xhat.pDOT,...
+                            Xhat.RL,Xhat.L);
+        end
     end
 end
 
