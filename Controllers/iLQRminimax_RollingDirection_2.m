@@ -263,8 +263,8 @@ classdef iLQRminimax_RollingDirection_2 < handle
             
             %initial guess
             N = obj.horizon;
-            obj.uGuess = repmat(obj.uGuess(:,2),1,N+1);
-            obj.wGuess = repmat(obj.wGuess(:,2),1,N+1);
+%             obj.uGuess = repmat(obj.uGuess(:,2),1,N+1);
+%             obj.wGuess = repmat(obj.wGuess(:,2),1,N+1);
             
             converged = 0; % initialize convergence flag to 'false'
             obj.xTraj(:,1) = X0; % initial state
@@ -304,7 +304,12 @@ classdef iLQRminimax_RollingDirection_2 < handle
 %             end
                 
             %ITERATIVE LINEARIZATION OUTER-LOOP
+            converge_count = 0
             while(~converged) 
+                converge_count = converge_count + 1
+                if converge_count > 20
+                    break
+                end
                 Alpha = 1;%min(1,Alpha*2); %increase linesearch stepsize
                        
                 %record 
@@ -402,8 +407,8 @@ classdef iLQRminimax_RollingDirection_2 < handle
                     
                     %regularize Hessians
                     rho = 1e-3;
-%                     Juu(:,:,t) = Juu(:,:,t) + (max(0,-min(real(eig(Juu(:,:,t)))))+rho)*eye(obj.nU);
-%                     Jww(:,:,t) = Jww(:,:,t) + (min(0,-max(real(eig(Jww(:,:,t)))))-rho)*eye(obj.nW);
+                    Juu(:,:,t) = Juu(:,:,t) + (max(0,-min(real(eig(Juu(:,:,t)))))+rho)*eye(obj.nU);
+                    Jww(:,:,t) = Jww(:,:,t) + (min(0,-max(real(eig(Jww(:,:,t)))))-rho)*eye(obj.nW);
 %                     Jxx(:,:,t) = Jxx(:,:,t) + (max(0,-min(real(eig(Jxx(:,:,t)))))+rho)*eye(obj.nX.total+1);
                     
                     %calculate optimal inputs and feedback gains
@@ -587,9 +592,9 @@ classdef iLQRminimax_RollingDirection_2 < handle
                     if(cost-currCost > -1e-3)%(currCost < cost)
                         %disp('Finished Line Search')
                         %                         Alpha
-%                         if(cost-currCost < 1e-3 )
-%                             converged = true;
-%                         end
+                        if(abs(cost-currCost) < 1e-6)
+                            converged = true;
+                        end
                         break
 %                     if(checkArmijo(obj,deltaX,obj.uGuess-uTemp,obj.wGuess-wTemp,Xref,Q,R,G,cost,currCost,0.5))
 %                         %disp('Finished Line Search')

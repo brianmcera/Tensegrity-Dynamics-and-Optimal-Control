@@ -33,7 +33,7 @@ cost_name = 'velocityCost'; % NOTE:specify costFunction parameters below
 
 sim_time_step = 1e-3;       % simulation timestep
 total_sim_steps = 5000;     % total number of simulation timesteps
-controller_horizon = 30;%5; % MPC horizon for controller
+controller_horizon = 20;%5; % MPC horizon for controller
 actuation_mode = 1;         % 1-cables, 2-rods, 3-both 
 
 % dynamics generation parameters
