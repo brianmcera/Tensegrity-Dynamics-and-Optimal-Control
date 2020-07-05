@@ -114,7 +114,7 @@ t_time = find((X_record.p(1,:)),1,'last');
 omega = simulationParameters_record.omega;
 constraints = [];
 
-for i = t_start:10:t_time
+for i = t_start:20:t_time
     %pause()
     if(~isolateNodes)
         Xbar.p = X_record.p(:,i);
@@ -220,7 +220,7 @@ end
 if(recordVideo)
     close(v)
 end
-   
+
 %% Dynamic movement, ODE Matrix Input (Useful for debugging ODE output)
 % This section will display the robot dynamically moving. 
 % This section is different from the previous section because rather than

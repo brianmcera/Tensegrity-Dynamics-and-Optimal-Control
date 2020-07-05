@@ -1,4 +1,4 @@
-classdef DefaultPlant < handle
+classdef Plant_CableInputNoise < handle
     %DEFAULTPLANT Summary of this class goes here
     %   Detailed explanation goes here
     
@@ -18,7 +18,7 @@ classdef DefaultPlant < handle
     end
     
     methods
-        function obj = DefaultPlant(x0,modelInfo,dT)
+        function obj = Plant_CableInputNoise(x0,modelInfo,dT)
             %DEFAULTPLANT Construct an instance of this class
             %   Detailed explanation goes here
             obj.simulationTime = 0;
@@ -36,9 +36,17 @@ classdef DefaultPlant < handle
         end
         
         
-        function stepForward(obj,U,nominalFnc,hFcns,~)
+        function stepForward(obj,U,nominalFnc,hFcns,initializing)
             %METHOD1 Summary of this method goes here
             %   Detailed explanation goes here
+            
+            % apply uniform random noise in interval
+            if (~initializing)
+                disp('Adding Noise to Cable Inputs~')
+                noise_frac = 0.05;
+                U.RLdot = U.RLdot + noise_frac*rand(size(U.RLdot)).*...
+                    obj.cableLinearVelocity;
+            end
             
             %cable update, subject to speed limits
             Uinput.RLdot = sign(U.RLdot).*...
