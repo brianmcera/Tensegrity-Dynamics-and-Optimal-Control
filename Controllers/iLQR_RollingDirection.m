@@ -93,7 +93,7 @@ classdef iLQR_RollingDirection < handle
             
             %Jacobians
             obj.Amats = zeros(obj.nX.total+1,obj.nX.total+1,horizon+1);
-            obj.Bmats = zeros(obj.nX.total+1,obj.nU.RLdot+obj.nX.L,horizon+1);
+            obj.Bmats = zeros(obj.nX.total+1,obj.nU.RLdot+obj.nX.  L,horizon+1);
             obj.QPrimemats = zeros(obj.nX.total+obj.nU.total+2,obj.nX.total+obj.nU.total+2,horizon+1);
             obj.RPrimemats = zeros(obj.nU.RLdot+obj.nU.Ldot,obj.nU.RLdot+obj.nU.Ldot,horizon+1);
             obj.NPrimemats = zeros(obj.nX.total+obj.nU.total+2,obj.nU.RLdot+obj.nX.L,horizon+1);
