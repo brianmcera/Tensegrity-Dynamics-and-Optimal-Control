@@ -105,7 +105,7 @@ classdef iLQRminimax_RollingDirection_inputpenalty < handle
                 rodVel_cost*eye(obj.nX.L); %penalize rod actuation heavily
             
             % Disturbance Penalty (assume same size as state, for now)
-            obj.G = 1e-3*eye(obj.nX.total);
+            obj.G = 1e6*eye(obj.nX.total);
                   
             % Array of Input Feedback Gains
             % columns dimension: X_aug(nX+1) + constant (1) = (nX.total+2)
