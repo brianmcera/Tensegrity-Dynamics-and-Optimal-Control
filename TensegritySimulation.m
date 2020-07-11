@@ -25,15 +25,15 @@ model_name = 'six_bar_model';
 % plant filename
 plant_name = 'DefaultPlant';
 % observer filename
-observer_name = 'DefaultObserver';%'DefaultObserver_CableLengthNoise';
+observer_name = 'DefaultObserver';
 % controller filename
-controller_name = 'iLQRminimax_RollingDirection_inputpenalty'; %'iLQR_RollingDirection';
+controller_name = 'iLQRminimax_RollingDirection_inputpenalty';
 % cost filename
 cost_name = 'velocityCost'; % NOTE:specify costFunction parameters below
 
-sim_time_step = 1e-3;       % simulation timestep
+sim_time_step = 5e-3;       % simulation timestep
 total_sim_steps = 5000;     % total number of simulation timesteps
-controller_horizon = 20;%5; % MPC horizon for controller
+controller_horizon = 10;%5; % MPC horizon for controller
 actuation_mode = 1;         % 1-cables, 2-rods, 3-both 
 
 % dynamics generation parameters
@@ -47,7 +47,7 @@ save_period = 50;   % how often to save data (e.g., every 50 timesteps)
 
 % forward simulation / initial conditions
 show_initialization_graphics = false;   % true/false
-kinetic_energy_damping = true;         % true/false
+kinetic_energy_damping = true;          % true/false
 perturb_cables_percent = 0.00;          % double between 0 and 1
 perturb_rods_percent = 0.00;            % double between 0 and 1
 xy_random_rotate = false;               % true/false
@@ -257,10 +257,10 @@ pause(1e-3) % give time to update and redraw structurePlot
 % Parameters' section above.
 
 % user-defined arguments to cost function
-cost_args.RL_diff_weight = 5;
+cost_args.RL_diff_weight = 1e-2;
 cost_args.RL_actuation_weight = 0;
 cost_args.L_diff_weight = 0;
-cost_args.velocity_reward = 5;
+cost_args.velocity_reward = 50;
 cost_args.omega = omega; 
 cost_args.stepDiscount = 0.95;
 cost_args.N = controller_horizon;
@@ -502,7 +502,7 @@ for iteration = 1:total_sim_steps
             workspaceVars = who;
             try
                 save(['./Results/LatestResults_MPC_',num2str(time_stamp),'_',...
-                    model_name,'_',controller_name],...
+                    model_name,'_',controller_name,'_G1e-3'],...
                     workspaceVars{not(~contains(workspaceVars, 'record'))})
             catch
                 disp('File Temporarily Unavailable')

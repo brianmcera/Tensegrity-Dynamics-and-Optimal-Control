@@ -43,7 +43,6 @@ for k=1:N+1
 %             (desired_direction'*X.pDOT(node*3-2:node*3,k));
 %     end
 
-    
     cost = cost - (velocity_reward)*(stepDiscount^(k-1))*...
         kron(omega.M'/totalMass,desired_direction')*X.pDOT(:,k);
 

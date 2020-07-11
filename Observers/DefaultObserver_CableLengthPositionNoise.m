@@ -41,7 +41,7 @@ classdef DefaultObserver_CableLengthPositionNoise < handle
             
             %inject noise into nodal positions
             p_frac = 0.05; %range from min to max percent deviation
-            Xhat.p = Xhat.p + p_frac*(rand(size(Xhat.RL))-0.5);
+            Xhat.p = Xhat.p + p_frac*(rand(size(Xhat.p))-0.5);
         end
     end
 end

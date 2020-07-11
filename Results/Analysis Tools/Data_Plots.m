@@ -220,7 +220,7 @@ end
 if(recordVideo)
     close(v)
 end
-
+ 
 %% Dynamic movement, ODE Matrix Input (Useful for debugging ODE output)
 % This section will display the robot dynamically moving. 
 % This section is different from the previous section because rather than
@@ -436,7 +436,7 @@ t_time = find((Xhat_record.p(1,:)),1,'last');
 omega = simulationParameters_record.omega;
 constraints = [];
 
-for i = t_start:5:t_time
+for i = t_start:1:t_time
     %pause()
     if(~isolateNodes)
         Xhat.p = Xhat_record.p(:,i);
@@ -444,8 +444,8 @@ for i = t_start:5:t_time
         Xbar.p = X_record.p(:,i);
         Xbar.pDOT = X_record.pDOT(:,i);
         cla
-        structurePlot(Xhat,omega,constraints,[az,el],0,1,1)
-        structurePlot(Xbar,omega,constraints,[az,el],0,0,0)
+        structurePlot(Xhat,omega,constraints,[az,el],0,0,1,0,0)
+        structurePlot(Xbar,omega,constraints,[az,el],0,1,0,0,0)
 
         drawnow
         camlight

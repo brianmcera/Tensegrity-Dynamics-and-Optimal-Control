@@ -70,7 +70,7 @@ classdef QP_MPC_RollingDirection < handle
                         
             %solver options
             obj.options = sdpsettings('showprogress',0,...
-                'cachesolvers',1,'warning',1,'verbose',0,...
+                'cachesolvers',1,'warning',1,'verbose',1,...
                 'solver','gurobi','usex0',0,'debug',0);
             
             %instantiate SDPVARs
@@ -145,8 +145,8 @@ classdef QP_MPC_RollingDirection < handle
             centroid = [xCOM;yCOM;zCOM];
             desiredDirection = obj.targetDestination-[xCOM;yCOM];
             desiredDirection = desiredDirection/norm(desiredDirection);
-            %zWeight = mean(obj.omega.X.p0(3:3:end))-zCOM;
-            zWeight = mean(obj.omega.X.p0(end-3:3:end))-mean(Xhat.p(end-3:3:end)); %weight only on payload Z
+            zWeight = mean(obj.omega.X.p0(3:3:end))-zCOM;
+%             zWeight = mean(obj.omega.X.p0(end-3:3:end))-mean(Xhat.p(end-3:3:end)); %weight only on payload Z
             desiredDirection = [desiredDirection;10*zWeight];
             desiredDirection = desiredDirection/norm(desiredDirection);
             crossAxis = cross(desiredDirection,[0 0 1])';

@@ -90,7 +90,7 @@ classdef iLQRminimax_RollingDirection_inputpenalty < handle
             
             % cable deviation penalty matrix (the state x.RL should be the
             % deviation from XRef.RL or actual state itself)
-            cableDeviationPenalty = 2e-1;
+            cableDeviationPenalty = 5e-0;%2e-1;
             obj.Q(obj.nX.p+obj.nX.pDOT+1:obj.nX.p+obj.nX.pDOT+obj.nX.RL,...
                 obj.nX.p+obj.nX.pDOT+1:obj.nX.p+obj.nX.pDOT+obj.nX.RL) = ...
                 cableDeviationPenalty*eye(obj.nX.RL); %1e0 works for 6-bar,
@@ -272,10 +272,14 @@ classdef iLQRminimax_RollingDirection_inputpenalty < handle
             
             %initial guess
             N = obj.horizon;
-            obj.uGuess = repmat(obj.uGuess(:,2),1,N+1);
-            obj.wGuess = repmat(obj.wGuess(:,2),1,N+1);
-            obj.uDeltaGuess = zeros(size(obj.uDeltaGuess));
-            obj.wDeltaGuess = zeros(size(obj.wDeltaGuess));
+            %             obj.uGuess = repmat(obj.uGuess(:,2),1,N+1);
+            %             obj.wGuess = zeros(size(obj.wGuess));%repmat(obj.wGuess(:,2),1,N+1);
+            %             obj.uDeltaGuess = zeros(size(obj.uDeltaGuess));
+            %             obj.wDeltaGuess = zeros(size(obj.wDeltaGuess));
+            obj.uGuess(:,1:end-1) = obj.uGuess(:,2:end);
+            obj.uDeltaGuess = diff(obj.uGuess,1,2);
+            obj.wDeltaGuess = diff(obj.wGuess,1,2);
+            %obj.uDeltaGuess(:,1:end-1) = obj.uDeltaGuess(:,2:end);
             
             converged = 0; % initialize convergence flag to 'false'
             obj.xTraj(:,1) = X0; % initial state
@@ -440,7 +444,7 @@ classdef iLQRminimax_RollingDirection_inputpenalty < handle
                     Juw(:,:,t) = Fu'*obj.Vxx(:,:,t+1)*Fw;
                     
                     %regularize Hessians to ensure PD / ND
-                    rho = 1e-2;
+                    rho = 1e-1;
                     Juu(:,:,t) = Juu(:,:,t) + (max(0,-min(real(eig(Juu(:,:,t)))))+rho)*eye(obj.nU);
                     Jww(:,:,t) = Jww(:,:,t) + (min(0,-max(real(eig(Jww(:,:,t)))))-rho)*eye(obj.nW);
 %                     Jxx(:,:,t) = Jxx(:,:,t) + (max(0,-min(real(eig(Jxx(:,:,t)))))+rho)*eye(obj.nX.total+1);
@@ -463,10 +467,10 @@ classdef iLQRminimax_RollingDirection_inputpenalty < handle
                     obj.Kgains(1:obj.nU,:,t) = [G_ut,g_ut];
                     obj.Kgains(obj.nU+1:end,:,t) = [G_wt,g_wt];
                                        
-%                     %zero out gain on rods (fix this later, should look at
-%                     %rod velocity constraints instead of hardcoding)
-%                     obj.Kgains(obj.nU_RLdot+1:obj.nU_RLdot+obj.nU_Ldot,:,t)...
-%                         = zeros(obj.nU_Ldot,obj.nX.total+2);
+                    %zero out gain on rods (fix this later, should look at
+                    %rod velocity constraints instead of hardcoding)
+                    obj.Kgains(obj.nU_RLdot+1:obj.nU_RLdot+obj.nU_Ldot,:,t)...
+                        = zeros(obj.nU_Ldot,obj.nX.total+2+obj.nU+obj.nW);
                 end
  
                 %calculate initial trajectory cost
@@ -561,19 +565,19 @@ classdef iLQRminimax_RollingDirection_inputpenalty < handle
                             [~,j] = find(obj.cableConstraintMatrix(velExceeded,:));
                             for k = 1:numel(j)
                                 obj.uGuess(j(k),t) = sign(...
-                                    obj.uGuess(j(k),t)...
-                                    +obj.uDeltaGuess(j(k),t))*...
-                                    min(abs(obj.uGuess(j(k),t)...
-                                    +obj.uDeltaGuess(j(k),t)),...
+                                    obj.uGuess(j(k),t))*...
+                                    min(abs(obj.uGuess(j(k),t)),...
                                     obj.omega.cables.linear_velocity(cables(k)));
+                                %obj.uDeltaGuess(j(k),t) = 0;
+                             
                             end   
                             %handle disturbance bounds
                             distExceeded = abs(obj.wGuess(:,t))...
                                 >obj.wBounds;
                             obj.wGuess(distExceeded,t) = sign(...
-                                obj.wGuess(distExceeded,t)...
-                                +obj.wDeltaGuess(distExceeded,t)).*...
+                                obj.wGuess(distExceeded,t)).*...
                                 obj.wBounds(distExceeded);
+                            %obj.wDeltaGuess(distExceeded,t) = 0;
                         end
                         
                         Khat = obj.Kgains(:,1:end-1,t);
@@ -602,19 +606,18 @@ classdef iLQRminimax_RollingDirection_inputpenalty < handle
                             [~,j] = find(obj.cableConstraintMatrix(velExceeded,:));
                             for k = 1:numel(j)
                                 obj.uGuess(j(k),t) = sign(...
-                                    obj.uGuess(j(k),t)...
-                                    +obj.uDeltaGuess(j(k),t))*...
-                                    min(abs(obj.uGuess(j(k),t)...
-                                    +obj.uDeltaGuess(j(k),t)),...
+                                    obj.uGuess(j(k),t))*...
+                                    min(abs(obj.uGuess(j(k),t)),...
                                     obj.omega.cables.linear_velocity(cables(k)));
+                                %obj.uDeltaGuess(j(k),t) = 0;
                             end   
                             %handle disturbance bounds
                             distExceeded = abs(obj.wGuess(:,t))...
                                 >obj.wBounds;
                             obj.wGuess(distExceeded,t) = sign(...
-                                obj.wGuess(distExceeded,t)...
-                                +obj.wDeltaGuess(distExceeded,t)).*...
+                                obj.wGuess(distExceeded,t)).*...
                                 obj.wBounds(distExceeded);
+                            %obj.wDeltaGuess(distExceeded,t) = 0;
                         end
                         
                         %calculate deltas for next time step
