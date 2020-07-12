@@ -246,14 +246,14 @@ rotateCamera = false; %continuous rotation camera
 el = 15; %elevation camera angle
 az = 0; %azimuthal camera angle
 constraints = [];
-omega = I_six_bar_model()
+omega = six_bar_model()
 xTrans = XOUT';
 for idx = 1:size(xTrans,2)
     %pause()
     cla %for the node/direction plot
     
     Xbar.p = xTrans(1:36,idx);
-    structurePlot(Xbar,omega,[],[az,el],1,1,1)
+    structurePlot(Xbar,omega,[],[az,el],1,1,1,0,0)
 
     pause(1e-3)
     

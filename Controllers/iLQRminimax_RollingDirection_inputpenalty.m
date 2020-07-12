@@ -105,7 +105,7 @@ classdef iLQRminimax_RollingDirection_inputpenalty < handle
                 rodVel_cost*eye(obj.nX.L); %penalize rod actuation heavily
             
             % Disturbance Penalty (assume same size as state, for now)
-            obj.G = 1e6*eye(obj.nX.total);
+            obj.G = 1e0*eye(obj.nX.total);
                   
             % Array of Input Feedback Gains
             % columns dimension: X_aug(nX+1) + constant (1) = (nX.total+2)
@@ -152,7 +152,10 @@ classdef iLQRminimax_RollingDirection_inputpenalty < handle
                 costOutput,controllerOutputArgs] = getOptimalInput(...
                 obj,Xhat,Uhat,nominalFnc,jacobianFcns,hFcns,costFcnHandle,...
                 debugFcns,openLoopFlag)
-                                    
+              
+            % record G disturbance
+            controllerOutputArgs.distG = obj.G;
+            
             % Calculate desired rolling direction according to target goal
             totalMass = sum(obj.omega.M);
             xCOM = sum(obj.omega.M.*Xhat.p(1:3:end))/totalMass;
@@ -287,8 +290,8 @@ classdef iLQRminimax_RollingDirection_inputpenalty < handle
             %% forward simulate to get initial state trajectory
             for k = 1:N
                 obj.xTraj(:,k+1) = stepForward(obj,...
-                    obj.uGuess(:,k)+obj.uDeltaGuess(:,k),...
-                    obj.wGuess(:,k)+obj.wDeltaGuess(:,k),...
+                    obj.uGuess(:,k),...
+                    obj.wGuess(:,k),...
                     obj.xTraj(:,k));
             end
             
@@ -623,8 +626,8 @@ classdef iLQRminimax_RollingDirection_inputpenalty < handle
                         %calculate deltas for next time step
                         temp = obj.xTraj(:,t+1);
                         obj.xTraj(:,t+1) = stepForward(...
-                            obj,obj.uGuess(:,t)+obj.uDeltaGuess(:,t),...
-                            obj.wGuess(:,t)+obj.wDeltaGuess(:,t),...
+                            obj,obj.uGuess(:,t),...
+                            obj.wGuess(:,t),...
                             obj.xTraj(:,t));
                         deltaX(:,t+1) = obj.xTraj(:,t+1)-temp; 
                         tempU = obj.uGuess(:,t);
@@ -766,9 +769,11 @@ classdef iLQRminimax_RollingDirection_inputpenalty < handle
             %forward simulate dynamics with ODE solver
             XIN = [X.p;X.pDOT;X.RL;X.L];
             [~,XOUT] = ode45(@(t,Xstacked)...
-                tensegrityODE(t,Xstacked,Uinput,obj.omega.nominalFcn,obj.omega.hFcns),[0 obj.dT],XIN);
+                tensegrityODE(t,Xstacked,Uinput,obj.omega.nominalFcn,...
+                obj.omega.hFcns),[0 obj.dT],XIN);
             
-            XOUT = XOUT(end,:)' + obj.dT*w_vec; %really simple disturbance model
+            %really simple disturbance model
+            XOUT = XOUT(end,:)' + obj.dT*w_vec; 
         end
         
         function cost = calculateCost(obj,Xref,Q,R,G)

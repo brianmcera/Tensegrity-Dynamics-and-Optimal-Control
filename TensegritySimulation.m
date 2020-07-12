@@ -31,7 +31,7 @@ controller_name = 'iLQRminimax_RollingDirection_inputpenalty';
 % cost filename
 cost_name = 'velocityCost'; % NOTE:specify costFunction parameters below
 
-sim_time_step = 5e-3;       % simulation timestep
+sim_time_step = 2e-3;       % simulation timestep
 total_sim_steps = 5000;     % total number of simulation timesteps
 controller_horizon = 10;%5; % MPC horizon for controller
 actuation_mode = 1;         % 1-cables, 2-rods, 3-both 
