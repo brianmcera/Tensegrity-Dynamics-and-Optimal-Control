@@ -94,7 +94,7 @@ az = 0; %azimuthal camera angle
 isolateNodes = false; % only plot nodes
 plot_openLoopTraj = false; % MPC OpenLoop Trajectories for each node
 highlightSupportNodes = false; % plot the nodes in contact with the ground
-plotDirection = false; %show 
+plotDirection = true; %show 
 plotCOM = true;
 recordVideo = false;
 
@@ -114,7 +114,7 @@ t_time = find((X_record.p(1,:)),1,'last');
 omega = simulationParameters_record.omega;
 constraints = [];
 
-for i = t_start:20:t_time
+for i = t_start:10:t_time
     %pause()
     if(~isolateNodes)
         Xbar.p = X_record.p(:,i);
@@ -272,9 +272,9 @@ plotDirection = true;
 plotCOM = true;
 plotUnc = true;
 
-
+baseFloor = 0;
 rotateCamera = false; %continuous rotation camera
-el = 15; %elevation camera angle
+el = 5; %elevation camera angle
 az = 0; %azimuthal camera angle
 
 t_start = 1;
@@ -303,7 +303,7 @@ for i = t_start:1:t_time
         Xbar.pDOT = Xhat_record.pDOT(:,i);
         subplot(2,2,[1 3])
         %cla
-        structurePlot(Xbar,omega,constraints,[az,el],1,1,1)
+        structurePlot(Xbar,omega,constraints,[az,el],1,1,1,0,0)
         camlight
 
         if(rotateCamera)
@@ -356,7 +356,7 @@ for i = t_start:1:t_time
             view(0,0)
         end
     end
-    baseFloor = -0.4;%min(min(Xhat_record.p(3:3:end,1:t_time)))+5e-3;
+    %baseFloor = -0.4;%min(min(Xhat_record.p(3:3:end,1:t_time)))+5e-3;
     if(highlightSupportNodes)
         for node = 1:length(Xhat_record.p(:,1))/3
             if(Xhat_record.p(node*3,i)<=baseFloor)
@@ -406,7 +406,8 @@ for i = t_start:1:t_time
             [Centroid_pos(3) baseFloor],'r--p','linewidth',5);
     end
     
-    zlim([baseFloor-0.01 .4])
+    %zlim([baseFloor-0.01 .4])
+    axis square
     pause(dt/10)
 end 
  
@@ -436,7 +437,7 @@ t_time = find((Xhat_record.p(1,:)),1,'last');
 omega = simulationParameters_record.omega;
 constraints = [];
 
-for i = t_start:1:t_time
+for i = t_start:3:t_time
     %pause()
     if(~isolateNodes)
         Xhat.p = Xhat_record.p(:,i);

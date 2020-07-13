@@ -94,9 +94,12 @@ classdef UnscentedKalmanFilter_IMUEncoder < handle
             obj.Xhat_m.pDOT = x0.pDOT+randPercent*max(x0.pDOT)*zeros(size(x0.pDOT));
             obj.Xhat_m.RL   = x0.RL+randPercent*max(x0.RL)*randn(size(x0.RL));
             obj.Xhat_m.L  	= x0.L+randPercent*max(x0.L)*randn(size(x0.L));
+            
             %start estimate on ground
             obj.Xhat_m.p(3:3:end) = obj.Xhat_m.p(3:3:end) -...
                 min(obj.Xhat_m.p(3:3:end)) + (-0.4);
+            
+            % Instantiate prior update state estimates
             obj.Xhat_p.p   	= obj.Xhat_m.p;
             obj.Xhat_p.pDOT = obj.Xhat_m.pDOT;
             obj.Xhat_p.RL   = obj.Xhat_m.RL;
@@ -119,7 +122,6 @@ classdef UnscentedKalmanFilter_IMUEncoder < handle
         end 
         
         function [Xhat_m,z,PmVar,PpVar] = estimateState(obj,Y,U,Q,R)
-            
             % ESTIMATESTATE This function takes in the full-state
             % observations from 'defaultPlant' and parses the struct for the
             % necessary Xhat,Uhat output for the controller
@@ -130,8 +132,7 @@ classdef UnscentedKalmanFilter_IMUEncoder < handle
             %Recording down current observations as a property may
             %be useful for observers that require updating based on past
             %estimates (e.g., Kalman Filter)
-            
-            
+               
             % Set Noise variance
             S_v = Q; % Desired variance
             A_v = sqrtm(S_v); 

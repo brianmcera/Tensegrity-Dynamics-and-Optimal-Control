@@ -90,7 +90,7 @@ classdef iLQRminimax_RollingDirection_inputpenalty < handle
             
             % cable deviation penalty matrix (the state x.RL should be the
             % deviation from XRef.RL or actual state itself)
-            cableDeviationPenalty = 5e-0;%2e-1;
+            cableDeviationPenalty = 1e1;%2e-1;
             obj.Q(obj.nX.p+obj.nX.pDOT+1:obj.nX.p+obj.nX.pDOT+obj.nX.RL,...
                 obj.nX.p+obj.nX.pDOT+1:obj.nX.p+obj.nX.pDOT+obj.nX.RL) = ...
                 cableDeviationPenalty*eye(obj.nX.RL); %1e0 works for 6-bar,
@@ -105,7 +105,7 @@ classdef iLQRminimax_RollingDirection_inputpenalty < handle
                 rodVel_cost*eye(obj.nX.L); %penalize rod actuation heavily
             
             % Disturbance Penalty (assume same size as state, for now)
-            obj.G = 1e0*eye(obj.nX.total);
+            obj.G = 1e6*eye(obj.nX.total);
                   
             % Array of Input Feedback Gains
             % columns dimension: X_aug(nX+1) + constant (1) = (nX.total+2)
@@ -123,9 +123,9 @@ classdef iLQRminimax_RollingDirection_inputpenalty < handle
             obj.wDeltaGuess = zeros(size(obj.wGuess,1),horizon);
             obj.wBounds = zeros(obj.nX.total,1);
             obj.wBounds(obj.nX.p+obj.nX.pDOT+1:obj.nX.p+obj.nX.pDOT+obj.nX.RL) = ...
-                1e-2*ones(obj.nX.RL,1); % RL disturbances
+                1e-1*ones(obj.nX.RL,1); % RL disturbances
             obj.wBounds(1:obj.nX.p) = ...
-                1e-2*ones(obj.nX.p,1); % position disturbances
+                1e-1*ones(obj.nX.p,1); % position disturbances
             
             % input penalty
             obj.inputChangePenalty = 1e0*eye(obj.nU);
@@ -282,7 +282,8 @@ classdef iLQRminimax_RollingDirection_inputpenalty < handle
             obj.uGuess(:,1:end-1) = obj.uGuess(:,2:end);
             obj.uDeltaGuess = diff(obj.uGuess,1,2);
             obj.wDeltaGuess = diff(obj.wGuess,1,2);
-            %obj.uDeltaGuess(:,1:end-1) = obj.uDeltaGuess(:,2:end);
+%             obj.wGuess = zeros(size(obj.wGuess));
+%             obj.wDeltaGuess = zeros(size(obj.wDeltaGuess));
             
             converged = 0; % initialize convergence flag to 'false'
             obj.xTraj(:,1) = X0; % initial state

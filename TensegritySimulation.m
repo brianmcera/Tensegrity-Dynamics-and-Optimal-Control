@@ -25,13 +25,13 @@ model_name = 'six_bar_model';
 % plant filename
 plant_name = 'DefaultPlant';
 % observer filename
-observer_name = 'DefaultObserver';
+observer_name = 'UnscentedKalmanFilter_IMUEncoderNodeVel_OLD2';%'DefaultObserver';
 % controller filename
 controller_name = 'iLQRminimax_RollingDirection_inputpenalty';
 % cost filename
 cost_name = 'velocityCost'; % NOTE:specify costFunction parameters below
 
-sim_time_step = 2e-3;       % simulation timestep
+sim_time_step = 5e-3;       % simulation timestep
 total_sim_steps = 5000;     % total number of simulation timesteps
 controller_horizon = 10;%5; % MPC horizon for controller
 actuation_mode = 1;         % 1-cables, 2-rods, 3-both 
@@ -43,7 +43,7 @@ optimized_dynamics_filename = 'optimizedDynamics_SixBar_20_03_26_10_19_07';
 
 % save data
 log_toggle =  true; % toggle flag to save simulation data to external file
-save_period = 50;   % how often to save data (e.g., every 50 timesteps)
+save_period = 10;   % how often to save data (e.g., every 50 timesteps)
 
 % forward simulation / initial conditions
 show_initialization_graphics = false;   % true/false
@@ -436,10 +436,12 @@ for iteration = 1:total_sim_steps
     
     observerElapsed = tic;
     Qvar = (1e-2)^2*eye(size(X.p,1)+size(X.pDOT,1)+size(X.RL,1)+size(X.L,1));
-    Rvar = diag([(1e-2)^2*ones(18,1);
-        (10e-2)^2*ones(24,1);
-        (1e-2)^2*ones(36,1);
-        (1e-6)^2*ones(6,1)]);% observer vector dimension = 84
+    Rvar = diag([...
+        (1e-2)^2*ones(18,1);    % orientation variance
+        (1e-2)^2*ones(24,1);    % cable length variance
+        (1e-2)^2*ones(36,1);    % node velocity variance
+        (1e-6)^2*ones(6,1);...  % rod length variance
+        ]);% observer vector dimension = 84
     [Xhat,Z,Pm,Pp] = observer.estimateState(Y,U,Qvar,Rvar);
     disp(['Observer Elapsed Time: ',num2str(toc(observerElapsed))])
     pause(1e-4)

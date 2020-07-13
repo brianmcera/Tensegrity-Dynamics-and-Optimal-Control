@@ -98,7 +98,7 @@ classdef UnscentedKalmanFilter_IMUEncoderNodeVel_OLD2 < handle
             obj.Xhat_m.RL   = x0.RL+randPercent*max(x0.RL)*randn(size(x0.RL));
             obj.Xhat_m.L  	= x0.L+randPercent*max(x0.L)*randn(size(x0.L));
             obj.Xhat_m.p(3:3:end) = obj.Xhat_m.p(3:3:end) -...
-                min(obj.Xhat_m.p(3:3:end)) + (-0.4);
+                min(obj.Xhat_m.p(3:3:end));
             obj.Xhat_p.p   	= obj.Xhat_m.p;
             obj.Xhat_p.pDOT = obj.Xhat_m.pDOT;
             obj.Xhat_p.RL   = obj.Xhat_m.RL;
@@ -147,23 +147,20 @@ classdef UnscentedKalmanFilter_IMUEncoderNodeVel_OLD2 < handle
             
             %USER-DEFINED:parse full-state vector to simulate sensors =====
             %==============================================================
-            
             z = zeros(obj.nY,1);
+            %simulated IMU sensor per rod
             for i = 1:size(obj.modelInfo.R,1)
-                %simulated IMU sensor per rod
                 IMUvec = -kron(obj.modelInfo.R(i,:),eye(3))*Y.p; 
                 z(i*3-2:i*3) = IMUvec/norm(IMUvec); 
             end
-            
             %simulated Encoder sensor per cable
-            EncoderVec = Y.RL + obj.randomizedCableBias; %incorporate noise here <================ADDED BIAS HERE
+            EncoderVec = Y.RL;% + obj.randomizedCableBias; %incorporate noise here <================ADDED BIAS HERE
             z(size(obj.modelInfo.R,1)*3+1:...
                 size(obj.modelInfo.R,1)*3+obj.nX_RL) = EncoderVec;
-            
+            %simulated nodal velocities
             z(size(obj.modelInfo.R,1)*3+obj.nX_RL+1:...
-                size(obj.modelInfo.R,1)*3+obj.nX_RL+obj.nX_pDOT) = Y.pDOT;
-            
-            %rod lengths
+                size(obj.modelInfo.R,1)*3+obj.nX_RL+obj.nX_pDOT) = Y.pDOT; 
+            %simulated rod length measurements
             z(end-obj.nX_L+1:...
                 end) = Y.L;
             
@@ -174,9 +171,9 @@ classdef UnscentedKalmanFilter_IMUEncoderNodeVel_OLD2 < handle
             %==============================================================
             
             
-            %%%%%%%%%%%%%%%%%%%%%
-            % UKF Implementation 
-            %%%%%%%%%%%%%%%%%%%%%
+            %%%%%%%%%%%%%%%%%%%%%%
+            % UKF Implementation %
+            %%%%%%%%%%%%%%%%%%%%%%
             
             Xhat_m_Vec = [obj.Xhat_m.p;obj.Xhat_m.pDOT;obj.Xhat_m.RL;obj.Xhat_m.L];
             n = numel(Xhat_m_Vec);
@@ -259,11 +256,11 @@ classdef UnscentedKalmanFilter_IMUEncoderNodeVel_OLD2 < handle
             end
             obj.Pp = temp_Pp;
                         
-            
             % MEASUREMENT UPDATE
             disp('Measurement Update')
             sigma_z = zeros(obj.nY,size(sigma_x_p,2));
-            %USER-DEFINED:expected readings based on prior estimates ======
+            
+            %% ===USER-DEFINED:expected readings based on prior estimates ==
             %==============================================================
             for sample = 1:size(sigma_z,2)
                 currentX = struct();
@@ -283,8 +280,7 @@ classdef UnscentedKalmanFilter_IMUEncoderNodeVel_OLD2 < handle
                     size(obj.modelInfo.R,1)*3+obj.nX_RL+obj.nX_pDOT,...
                     sample) = currentX.pDOT;
                 sigma_z(end-obj.nX_L+1:...
-                    end,sample) = currentX.L;
-                
+                    end,sample) = currentX.L;            
             end
             %==============================================================
             %==============================================================
@@ -340,9 +336,9 @@ classdef UnscentedKalmanFilter_IMUEncoderNodeVel_OLD2 < handle
             obj.Xhat_m.p = constrainedP;
             
             %node on floor assumption
-            if min(obj.Xhat_m.p(3:3:end) > -0.38)
+            if min(obj.Xhat_m.p(3:3:end) > 0)
                 obj.Xhat_m.p(3:3:end) = obj.Xhat_m.p(3:3:end) - ...
-                    min(obj.Xhat_m.p(3:3:end)) + (-0.4008); %baseFloor hardcode
+                    min(obj.Xhat_m.p(3:3:end))-.005; %baseFloor hardcode
             end
             
 %             %rodLength assumption
@@ -355,8 +351,7 @@ classdef UnscentedKalmanFilter_IMUEncoderNodeVel_OLD2 < handle
             obj.Xhat_m.p(2:3:end) = obj.Xhat_m.p(2:3:end)-...
                 mean(obj.Xhat_m.p(2:3:end))+...
                 mean(Y.p(2:3:end));
-            
-                        
+                  
             %prepare output
 %             min(obj.Xhat_p.p)
 %             min(obj.Xhat_m.p)
