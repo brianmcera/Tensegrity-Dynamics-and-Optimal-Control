@@ -105,7 +105,7 @@ classdef iLQRminimax_RollingDirection_inputpenalty < handle
                 rodVel_cost*eye(obj.nX.L); %penalize rod actuation heavily
             
             % Disturbance Penalty (assume same size as state, for now)
-            obj.G = 1e6*eye(obj.nX.total);
+            obj.G = 1e3*eye(obj.nX.total);
                   
             % Array of Input Feedback Gains
             % columns dimension: X_aug(nX+1) + constant (1) = (nX.total+2)
@@ -123,9 +123,9 @@ classdef iLQRminimax_RollingDirection_inputpenalty < handle
             obj.wDeltaGuess = zeros(size(obj.wGuess,1),horizon);
             obj.wBounds = zeros(obj.nX.total,1);
             obj.wBounds(obj.nX.p+obj.nX.pDOT+1:obj.nX.p+obj.nX.pDOT+obj.nX.RL) = ...
-                1e-1*ones(obj.nX.RL,1); % RL disturbances
+                1e-2*ones(obj.nX.RL,1); % RL disturbances
             obj.wBounds(1:obj.nX.p) = ...
-                1e-1*ones(obj.nX.p,1); % position disturbances
+                1e-2*ones(obj.nX.p,1); % position disturbances
             
             % input penalty
             obj.inputChangePenalty = 1e0*eye(obj.nU);
@@ -275,7 +275,7 @@ classdef iLQRminimax_RollingDirection_inputpenalty < handle
             
             %initial guess
             N = obj.horizon;
-            %             obj.uGuess = repmat(obj.uGuess(:,2),1,N+1);
+%             obj.uGuess = repmat(obj.uGuess(:,2),1,N+1);
             %             obj.wGuess = zeros(size(obj.wGuess));%repmat(obj.wGuess(:,2),1,N+1);
             %             obj.uDeltaGuess = zeros(size(obj.uDeltaGuess));
             %             obj.wDeltaGuess = zeros(size(obj.wDeltaGuess));
@@ -639,7 +639,31 @@ classdef iLQRminimax_RollingDirection_inputpenalty < handle
                         obj.wGuess(:,t+1) = obj.wGuess(:,t) +...
                             obj.wDeltaGuess(:,t);
                         deltaW(:,t+1) = obj.wGuess(:,t+1) - tempW;   
-                    end                    
+                    end    
+                    
+                    t=N+1;
+                    if(checkConstraints)
+                        %handle paired/similar cable constraints
+                        velExceeded = abs(obj.cableConstraintMatrix*...
+                            obj.uGuess(1:obj.nU_RLdot,t))...
+                            >obj.omega.cables.linear_velocity;
+                        cables = find(velExceeded);
+                        [~,j] = find(obj.cableConstraintMatrix(velExceeded,:));
+                        for k = 1:numel(j)
+                            obj.uGuess(j(k),t) = sign(...
+                                obj.uGuess(j(k),t))*...
+                                min(abs(obj.uGuess(j(k),t)),...
+                                obj.omega.cables.linear_velocity(cables(k)));
+                            %obj.uDeltaGuess(j(k),t) = 0;
+                        end
+                        %handle disturbance bounds
+                        distExceeded = abs(obj.wGuess(:,t))...
+                            >obj.wBounds;
+                        obj.wGuess(distExceeded,t) = sign(...
+                            obj.wGuess(distExceeded,t)).*...
+                            obj.wBounds(distExceeded);
+                        %obj.wDeltaGuess(distExceeded,t) = 0;
+                    end
                     
                     % calculate new trajectory cost
                     currCost = calculateCost(obj,Xref,Q,R,G);
@@ -698,6 +722,11 @@ classdef iLQRminimax_RollingDirection_inputpenalty < handle
                         Alpha = Alpha/2;
                         if(Alpha<1e-3)
                             disp('Alpha small, moving on')
+                            %                             if sum(abs(obj.V-VTemp))<1e-2
+                            %                                 converged = 1;
+                            %                             else
+                            %                                 disp('Value Function not yet converged...')
+                            %                             end
                             converged = 1;
                             %rho = rho*2
                             break

@@ -274,7 +274,7 @@ plotUnc = true;
 
 baseFloor = 0;
 rotateCamera = false; %continuous rotation camera
-el = 5; %elevation camera angle
+el = 0; %elevation camera angle
 az = 0; %azimuthal camera angle
 
 t_start = 1;
