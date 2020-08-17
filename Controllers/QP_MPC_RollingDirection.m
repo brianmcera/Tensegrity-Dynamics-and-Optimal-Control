@@ -145,7 +145,7 @@ classdef QP_MPC_RollingDirection < handle
             centroid = [xCOM;yCOM;zCOM];
             desiredDirection = obj.targetDestination-[xCOM;yCOM];
             desiredDirection = desiredDirection/norm(desiredDirection);
-            zWeight = mean(obj.omega.X.p0(3:3:end))-zCOM;
+            zWeight = 1.1*mean(obj.omega.X.p0(3:3:end))-zCOM;
 %             zWeight = mean(obj.omega.X.p0(end-3:3:end))-mean(Xhat.p(end-3:3:end)); %weight only on payload Z
             desiredDirection = [desiredDirection;10*zWeight];
             desiredDirection = desiredDirection/norm(desiredDirection);

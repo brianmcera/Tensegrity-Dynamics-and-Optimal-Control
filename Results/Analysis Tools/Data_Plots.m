@@ -261,6 +261,8 @@ end
 
 %% Dynamics Movement, State Estimates
 h = figure(1);
+set(gcf,'color','w')
+set(gca,'fontname','times new roman','fontsize',24)
 clf
 title('Press Any Key to Start')
 pause()
@@ -271,11 +273,20 @@ highlightSupportNodes = true;
 plotDirection = true;
 plotCOM = true;
 plotUnc = true;
+recordVideo = false;
+
+if(recordVideo)
+    v = VideoWriter(['Rolling_CentralPayload_',datestr(now,'yy-mm-dd_HH_MM_SS'),...
+        '.avi']);
+    v.FrameRate = 33;  % Default 30
+    v.Quality = 75;    % Default 75
+    open(v);
+end
 
 baseFloor = 0;
 rotateCamera = false; %continuous rotation camera
-el = 0; %elevation camera angle
-az = 0; %azimuthal camera angle
+el = 15; %elevation camera angle
+az = 45; %azimuthal camera angle
 
 t_start = 1;
 dt = simulationParameters_record.timestep;
@@ -285,19 +296,25 @@ t_time = find((Xhat_record.p(1,:)),1,'last');
 omega = simulationParameters_record.omega;
 constraints = [];
 
-for i = t_start:1:t_time
+for i = t_start:6:t_time
     %pause()
     
     subplot(2,2,2)
+    grid on
     cla
-    bar([sqrt(Pm_record(1:36,i));abs([Xhat_record.p(:,i)-X_record.p(:,i)])])
-    title('Position State Estimates')
+    %bar([sqrt(Pm_record(1:36,i));abs([Xhat_record.p(:,i)-X_record.p(:,i)])])
+    bar(abs([Xhat_record.p(:,i)-X_record.p(:,i)]))
+    ylim([0 0.06])
+    title('Position State Estimates Abs. Error')
     %hold on
 %     bar(abs([Xhat_record.p(:,i)-X_record.p(:,i)]))
     subplot(2,2,4)
+    grid on
     cla
-    bar([sqrt(Pm_record(73:96,i));abs([Xhat_record.RL(:,i)-X_record.RL(:,i)])])
-    title('Cable State Estimates')
+    %bar([sqrt(Pm_record(73:96,i));abs([Xhat_record.RL(:,i)-X_record.RL(:,i)])])
+    bar(abs([Xhat_record.RL(:,i)-X_record.RL(:,i)]))
+    ylim([0 0.06])
+    title('Cable State Estimates Abs. Error')
     if(~isolateNodes)
         Xbar.p = Xhat_record.p(:,i);
         Xbar.pDOT = Xhat_record.pDOT(:,i);
@@ -409,10 +426,20 @@ for i = t_start:1:t_time
     %zlim([baseFloor-0.01 .4])
     axis square
     pause(dt/10)
+    
+    if(recordVideo)
+        frame = getframe(gcf);
+        writeVideo(v,frame);
+    end
 end 
+
+if(recordVideo)
+    close(v)
+end
  
 %% Dynamics Movement, True State AND State Estimates
 h = figure(1);
+set(gcf,'color','w')
 clf
 title('Press Any Key to Start')
 pause()
@@ -420,14 +447,22 @@ pause()
 isolateNodes = false; %only plot nodes
 plot_openLoopTraj = false; %MPC OpenLoop Trajectories for each node
 highlightSupportNodes = true;
-plotDirection = true;
-plotCOM = true;
+plotDirection = false;
+plotCOM = false;
 plotUnc = true;
+recordVideo = true;
 
+if(recordVideo)
+    v = VideoWriter(['State_estimate',datestr(now,'yy-mm-dd_HH_MM_SS'),...
+        '.avi']);
+    v.FrameRate = 33;  % Default 30
+    v.Quality = 75;    % Default 75
+    open(v);
+end
 
 rotateCamera = false; %continuous rotation camera
-el = 0; %elevation camera angle
-az = 0; %azimuthal camera angle
+el = 15; %elevation camera angle
+az = 45; %azimuthal camera angle
 
 t_start = 1;
 dt = simulationParameters_record.timestep;
@@ -437,7 +472,7 @@ t_time = find((Xhat_record.p(1,:)),1,'last');
 omega = simulationParameters_record.omega;
 constraints = [];
 
-for i = t_start:3:t_time
+for i = t_start:6:t_time
     %pause()
     if(~isolateNodes)
         Xhat.p = Xhat_record.p(:,i);
@@ -445,7 +480,7 @@ for i = t_start:3:t_time
         Xbar.p = X_record.p(:,i);
         Xbar.pDOT = X_record.pDOT(:,i);
         cla
-        structurePlot(Xhat,omega,constraints,[az,el],0,0,1,0,0)
+        structurePlot(Xhat,omega,constraints,[az,el],0,0,0,0,0)
         structurePlot(Xbar,omega,constraints,[az,el],0,1,0,0,0)
 
         drawnow
@@ -519,8 +554,8 @@ for i = t_start:3:t_time
             for k = 1:numel(idx)
             [X,Y,Z] = ellipsoid(Xhat_record.p(idx(k)*3-2,i),...
                 Xhat_record.p(idx(k)*3-1,i),Xhat_record.p(idx(k)*3,i),...
-                3*sqrt(Pm_record(idx(k)*3-2,i)),3*sqrt(Pm_record(idx(k)*3-1,i)),...
-                3*sqrt(Pm_record(idx(k)*3,i)));
+                2*sqrt(Pm_record(idx(k)*3-2,i)),2*sqrt(Pm_record(idx(k)*3-1,i)),...
+                2*sqrt(Pm_record(idx(k)*3,i)));
             surf(X,Y,Z,'FaceAlpha',0.2);
             end
         end
@@ -555,7 +590,15 @@ for i = t_start:3:t_time
     pause(dt/10)
     pDiff = norm(Xhat_record.p(:,i)-X_record.p(:,i))
     RLDiff = norm(Xhat_record.RL(:,i)-X_record.RL(:,i),1)/24
+    
+    if(recordVideo)
+        frame = getframe(gcf);
+        writeVideo(v,frame);
+    end
 end 
+if(recordVideo)
+    close(v)
+end
 
 %% Dynamic movement WITH ghost trail image
 h = figure(1);
@@ -673,20 +716,22 @@ dt = simulationParameters_record.timestep;
 t_time = find((X_record.p(1,:)),1,'last')
 t_gap = 1;
 %color_list = hsv(32);
-ax1 = subplot(2,1,1);
+%ax1 = subplot(1,1,1);
 
 tFin = t_time;
-t_start = tFin;
+t_start = 3;%tFin;
 %pause()
 
 for t_time = t_start:t_gap:tFin
     clf
     for i = 1:size(X_record.RL,1)
-        subplot(2,1,1);
+        %subplot(2,1,1);
         plot((0:t_time-1)*dt,X_record.RL(i,1:t_time)*100,'-','linewidth',2)%,'col',color_list(i,:))
         hold on
     end
-    pause(1e-4)
+    xlim([0 t_time*dt])
+    ylim([20 60])
+    pause(1e-3)
     t_time
 end
 colormap(hot)
@@ -997,5 +1042,84 @@ plot(1:length(costTrimmed),costTrimmed)
 title('Cost Over Time')
 
 ylabel('Cost')
+
+%% State Estimation Errors - Nodal Position
+figure(1)
+subplot(4,1,1)
+x_error = Xhat_record.p(1:3:end,:)-X_record.p(1:3:end,:);
+x_error = reshape(x_error,1,[]);
+histogram((abs(x_error)),100)
+subplot(4,1,2)
+y_error = Xhat_record.p(2:3:end,:)-X_record.p(2:3:end,:);
+y_error = reshape(y_error,1,[]);
+histogram((abs(y_error)),100)
+subplot(4,1,3)
+z_error = Xhat_record.p(3:3:end,:)-X_record.p(3:3:end,:);
+z_error = reshape(z_error,1,[]);
+histogram((abs(z_error)),100)
+subplot(4,1,4)
+total_error = Xhat_record.p(:,:)-X_record.p(:,:);
+total_error = reshape(total_error,1,[]);
+histogram((abs(total_error)),100)
+
+figure(2)
+boxplot([z_error',y_error',x_error'],'Notch','on','Colors','bgr',...
+    'OutlierSize',10,'Symbol','r^','orientation','horizontal',...
+    'labels',{'Z','Y','X'},'Widths',0.7)
+set(gca,'fontsize',20,'fontname','times new roman')
+xlabel('Nodal Position Estimation Error [m]')
+grid on
+grid minor
+xlim([-0.1 0.1])
+
+quantile(x_error,[.025 .25 .50 .75 .975])
+quantile(y_error,[.025 .25 .50 .75 .975])
+quantile(z_error,[.025 .25 .50 .75 .975])
+
+%% State Estimation Errors - Nodal Velocity
+figure(1)
+subplot(4,1,1)
+x_error = Xhat_record.pDOT(1:3:end,:)-X_record.pDOT(1:3:end,:);
+x_error = reshape(x_error,1,[]);
+histogram((abs(x_error)),100)
+subplot(4,1,2)
+y_error = Xhat_record.pDOT(2:3:end,:)-X_record.pDOT(2:3:end,:);
+y_error = reshape(y_error,1,[]);
+histogram((abs(y_error)),100)
+subplot(4,1,3)
+z_error = Xhat_record.pDOT(3:3:end,:)-X_record.pDOT(3:3:end,:);
+z_error = reshape(z_error,1,[]);
+histogram((abs(z_error)),100)
+subplot(4,1,4)
+total_error = Xhat_record.pDOT(:,:)-X_record.pDOT(:,:);
+total_error = reshape(total_error,1,[]);
+histogram((abs(total_error)),100)
+
+figure(2)
+boxplot([z_error',y_error',x_error'],'Notch','on','Colors','bgr',...
+    'OutlierSize',10,'Symbol','r^','orientation','horizontal',...
+    'labels',{'Z','Y','X'},'Widths',0.7)
+set(gca,'fontsize',20,'fontname','times new roman')
+xlabel('Nodal Velocity Estimation Error [m/s]')
+grid on
+grid minor
+
+quantile(x_error,[.025 .25 .50 .75 .975])
+quantile(y_error,[.025 .25 .50 .75 .975])
+quantile(z_error,[.025 .25 .50 .75 .975])
+
+%% State Estimation Error -- Cable Lengths
+
+figure(2)
+boxplot((Xhat_record.RL-X_record.RL)','Notch','on','Colors','b',...
+    'OutlierSize',10,'Symbol','r^','orientation','vertical',...
+    'Widths',0.7,'LabelOrientation','inline')
+set(gca,'fontsize',22,'fontname','times new roman')
+ylabel('Cable Rest Length Estimation Error [m]')
+xlabel('Cable ID')
+grid on
+
+quantile(reshape(Xhat_record.RL-X_record.RL,1,[]),[.025 .25 .50 .75 .975])
+
 
 

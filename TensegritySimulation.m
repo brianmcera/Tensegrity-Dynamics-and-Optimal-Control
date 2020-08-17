@@ -25,20 +25,20 @@ model_name = 'six_bar_model';
 % plant filename
 plant_name = 'DefaultPlant';
 % observer filename
-observer_name = 'UnscentedKalmanFilter_IMUEncoderNodeVel_OLD2';%'DefaultObserver';
+observer_name = 'DefaultObserver';
 % controller filename
 controller_name = 'iLQRminimax_RollingDirection_inputpenalty';
 % cost filename
 cost_name = 'velocityCost'; % NOTE:specify costFunction parameters below
 
-sim_time_step = 5e-3;       % simulation timestep
-total_sim_steps = 5000;     % total number of simulation timesteps
-controller_horizon = 10;%5; % MPC horizon for controller
+sim_time_step = 1e-3;       % simulation timestep
+total_sim_steps = 2000;     % total number of simulation timesteps
+controller_horizon = 15; % MPC horizon for controller
 actuation_mode = 1;         % 1-cables, 2-rods, 3-both 
 
 % dynamics generation parameters
-save_dynamics_file = false;
-optimize_flag = false;
+save_dynamics_file = true;
+optimize_flag = true;
 optimized_dynamics_filename = 'optimizedDynamics_SixBar_20_03_26_10_19_07';
 
 % save data
@@ -437,9 +437,9 @@ for iteration = 1:total_sim_steps
     observerElapsed = tic;
     Qvar = (1e-2)^2*eye(size(X.p,1)+size(X.pDOT,1)+size(X.RL,1)+size(X.L,1));
     Rvar = diag([...
-        (1e-2)^2*ones(18,1);    % orientation variance
-        (1e-2)^2*ones(24,1);    % cable length variance
-        (1e-2)^2*ones(36,1);    % node velocity variance
+        (5e-2)^2*ones(18,1);    % orientation variance
+        (5e-2)^2*ones(24,1);    % cable length variance
+        (5e-2)^2*ones(36,1);    % node velocity variance
         (1e-6)^2*ones(6,1);...  % rod length variance
         ]);% observer vector dimension = 84
     [Xhat,Z,Pm,Pp] = observer.estimateState(Y,U,Qvar,Rvar);
@@ -450,7 +450,7 @@ for iteration = 1:total_sim_steps
     % examples: constrained QP MPC, iLQR, LQR
     % input arguments - Xhat,Uhat,pDDOT,jacobians,hFcns
     
-    controllerElapsed = tic;     
+    controllerElapsed = tic;            
     [U,OL_states,OL_inputs,hVars,cost,controllerOutputs] =...
         controller.getOptimalInput(...
         Xhat,U,nominal_fcn,jacobian_fcns,hFcns,costFcnHandle,...
@@ -488,8 +488,8 @@ for iteration = 1:total_sim_steps
         Pp_record(:,iteration) = Pp;
         U_record.RLdot(:,iteration) = U.RLdot;
         U_record.Ldot(:,iteration) = U.Ldot;
-        X_openLoop_record{iteration} = OL_states; % save memory
-        U_openLoop_record{iteration} = OL_inputs; % save memory
+%         X_openLoop_record{iteration} = OL_states; % save memory
+%         U_openLoop_record{iteration} = OL_inputs; % save memory
         Xbar.p = plant.Current_p;
         Xbar.pDOT = plant.Current_pDOT;
         Xbar.RL = plant.Current_RL;

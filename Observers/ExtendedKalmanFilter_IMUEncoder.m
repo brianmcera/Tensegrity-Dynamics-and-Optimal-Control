@@ -97,17 +97,28 @@ classdef ExtendedKalmanFilter_IMUEncoder < handle
 %             obj.Pp          = zeros(obj.nX, obj.nX, obj.totalSimSteps);
             
             % Init values at k = 0
-            obj.Xhat_m.p   	= x0.p;
-            obj.Xhat_m.pDOT = x0.pDOT;
-            obj.Xhat_m.RL   = x0.RL;
-            obj.Xhat_m.L  	= x0.L;
-            obj.Xhat_p.p   	= x0.p;
-            obj.Xhat_p.pDOT = x0.pDOT;
-            obj.Xhat_p.RL   = x0.RL;
-            obj.Xhat_p.L  	= x0.L;
+            randPercent = .001;
+            obj.Xhat_m.p   	= modelInfo.X0+0.10*max(modelInfo.X0)*randn(size(modelInfo.X0));
+            obj.Xhat_m.pDOT = x0.pDOT+randPercent*max(x0.pDOT)*zeros(size(x0.pDOT));
+            obj.Xhat_m.RL   = x0.RL+randPercent*max(x0.RL)*randn(size(x0.RL));
+            obj.Xhat_m.L  	= x0.L+randPercent*max(x0.L)*randn(size(x0.L));
+            obj.Xhat_m.p(3:3:end) = obj.Xhat_m.p(3:3:end) -...
+                min(obj.Xhat_m.p(3:3:end));
+            obj.Xhat_p.p   	= obj.Xhat_m.p;
+            obj.Xhat_p.pDOT = obj.Xhat_m.pDOT;
+            obj.Xhat_p.RL   = obj.Xhat_m.RL;
+            obj.Xhat_p.L  	= obj.Xhat_m.L;
+            
+%             obj.Pm         	= diag(abs(randPercent^2*[...
+%                 max(modelInfo.X0)^2*ones(size(modelInfo.X0));...
+%                 max(x0.pDOT)^2*ones(size(x0.pDOT));...
+%                 max(x0.RL)^2*ones(size(x0.RL));...
+%                 max(x0.L)^2*ones(size(x0.L))]));
+%             obj.Pp       	= obj.Pm;
 
-            obj.Pm         	= (1e-6)*eye(obj.nX);
-            obj.Pp       	= obj.Pm;
+            obj.Pm = (1e-1)^2*eye(obj.nX);
+            obj.Pm(1:obj.nX_p,1:obj.nX_p) = (1e-1)^2*eye(obj.nX_p);
+            obj.Pp = obj.Pm;
 
             %%%%%%%%%%%% 
             %%%%%%%%%%%%
@@ -129,9 +140,9 @@ classdef ExtendedKalmanFilter_IMUEncoder < handle
             
             
             % Set Noise variance
-            S_v = 0.001*eye(obj.nX); % Desired variance
+            S_v = Q;%0.001*eye(obj.nX); % Desired variance
             A_v = sqrtm(S_v); 
-            S_w = 1e-6*eye(obj.nY); % Desired variance
+            S_w = R;%1e-6*eye(obj.nY); % Desired variance
             A_w = sqrtm(S_w);
             % Generate Random Noise
             obj.v = randn(obj.nX,1);
@@ -155,7 +166,7 @@ classdef ExtendedKalmanFilter_IMUEncoder < handle
             z(size(obj.modelInfo.R,1)*3+obj.nX_RL+1:size(obj.modelInfo.R,1)*3+obj.nX_RL+obj.nX_pDOT) = Y.pDOT;
             
             %incorporate Random Noise here
-
+            z = z + A_w*randn(size(z));
             %==============================================================
             %==============================================================
             
@@ -266,9 +277,9 @@ classdef ExtendedKalmanFilter_IMUEncoder < handle
             end
             obj.Xhat_m.p = constrainedP;
             
-%             %set nodes on ground
-%             obj.Xhat_m.p(3:3:end) = obj.Xhat_m.p(3:3:end) -...
-%                 min(obj.Xhat_m.p(3:3:end)) + (-0.40);
+            %set nodes on ground
+            obj.Xhat_m.p(3:3:end) = obj.Xhat_m.p(3:3:end) -...
+                min(obj.Xhat_m.p(3:3:end))-.005;
             
             %center node XY positions
             obj.Xhat_m.p(1:3:end) = obj.Xhat_m.p(1:3:end)-...

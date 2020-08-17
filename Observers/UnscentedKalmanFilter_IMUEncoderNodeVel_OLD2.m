@@ -111,8 +111,8 @@ classdef UnscentedKalmanFilter_IMUEncoderNodeVel_OLD2 < handle
 %                 max(x0.L)^2*ones(size(x0.L))]));
 %             obj.Pp       	= obj.Pm;
 
-            obj.Pm = (5e-2)^2*eye(obj.nX);
-            obj.Pm(1:obj.nX_p,1:obj.nX_p) = (5e-2)^2*eye(obj.nX_p);
+            obj.Pm = (1e-1)^2*eye(obj.nX);
+            obj.Pm(1:obj.nX_p,1:obj.nX_p) = (1e-1)^2*eye(obj.nX_p);
             obj.Pp = obj.Pm;
 
             %%%%%%%%%%%% 
